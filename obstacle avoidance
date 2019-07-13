@@ -4,27 +4,206 @@
 
 <!--list of global events-->
 
-
 <!--node Thymio-II Wireless-->
-<node name="Thymio-II Wireless" nodeId="{04372796-f200-47e7-8952-bd9403d80f5d}"><![CDATA[#Collision Avoidance
+<node nodeId="{ddf28c96-262f-4e05-891b-4b52ed727431}" name="Thymio-II Wireless"><![CDATA[#Collision Avoidance
 #Robot is intended to avoid obstacles and give feedback obstacle in range of 
 #sensor readings
 
-var i =0 
-#here we init robot movement with remote control
+var isMoving = 1 # holds the value moving 1 and not moving 0
+var countSteps = 0
+var i =0  #variable set default to 1
+#initial movement disabled
+motor.left.target = 0
+motor.right.target = 0
 
+ #timer default set to 0 
+  timer.period[0]=0
+  timer.period[1]= 0
+ 
+ #set led default to off
+ call leds.bottom.right(0,0,0)
+ call leds.bottom.left(0,0,0)
+ call leds.top(0,0,0)
+
+  #here we init robot movement with remote control
 onevent rc5
- if  rc5.command == 12 then
- 	call leds.top(31,31,12)
- end]]></node>
+ if (rc5.command == 12)then
+ 	call leds.top(31,31,12) #change color code to specified	
+ 	motor.left.target = 1000
+ 	motor.right.target = 1000
+end
+#halt robot movement on remote signal 13 or 80
+ if (rc5.command == 13 or rc5.command == 80) then
+ 	call leds.top(31,0,0) # change color to red on remote signal 13
+ 	motor.left.target = 0
+ 	motor.right.target = 0
+ 	timer.period[0] = 0
+ 	timer.period[1] = 0
+ 	isMoving = 0 #set moving to false
+ end
+ 
+ #backward movement on remote signal 81
+ if (rc5.command == 81) then
+ 	motor.left.target = -1000
+ 	motor.right.target = -1000
+ end
+ 
+ #forward movement on remote signal 80
+  if (rc5.command == 80) then
+ 	motor.left.target = 1000
+ 	motor.right.target = 1000
+ end
+ 
+ 
+ #right movement on remote signal 86
+ if (rc5.command == 86) then
+ 	 #init timer value for 400 miliseconds
+        timer.period[0] = 400
+        #turn right 
+ 		motor.left.target =100
+ 		motor.right.target =-100
+ 	end
+ 
+ 
+  #left movement on remote signal 85
+   if (rc5.command == 85) then
+   #init timer value for 400 miliseconds
+    timer.period[0] = 400
+    #turn in left wheel direction
+ 	motor.left.target = -100
+ 	motor.right.target = 100
+ end
+ 
+ onevent timer0
+ 	timer.period[0] = 0
+ 	motor.left.target = 1000
+ 	motor.right.target = 1000
+ 	
+ 	
+ 	#obstacle avoidance
+onevent prox	
+#obstacle detected at right sensor 0			
+		if (prox.horizontal[0] > 1000) then
+		call leds.bottom.left(0,31,31)
+		motor.left.target = -100
+		motor.right.target = 100
+		isMoving =1
+		elseif (prox.horizontal[4] > 1000) then
+		call leds.bottom.right(0,1,31)
+		motor.left.target = -100
+		motor.right.target = 100
+	    isMoving =1
+	#go forward if not obstacle
+	elseif (isMoving != 0 ) then
+	call leds.bottom.right(0,0,0)
+		call leds.bottom.left(0,0,0)
+		motor.left.target = 900
+		motor.right.target = 900
+	end
+ 	
+		
+	]]></node>
 
 
 <!--node Thymio-II Wireless-->
-<node name="Thymio-II Wireless" nodeId="{75ccac49-62a5-4470-ae1b-2fa48550ec79}"><![CDATA[]]></node>
+<node nodeId="{606208ce-e595-49ed-afb1-c046bd68c2c1}" name="Thymio-II Wireless"><![CDATA[#Collision Avoidance
+#Robot is intended to avoid obstacles and give feedback obstacle in range of 
+#sensor readings
 
+var isMoving = 1 # holds the value moving 1 and not moving 0
+var countSteps = 0
+var i =0  #variable set default to 1
+#initial movement disabled
+motor.left.target = 0
+motor.right.target = 0
 
-<!--node Thymio-II Wireless-->
-<node name="Thymio-II Wireless" nodeId="{ddf28c96-262f-4e05-891b-4b52ed727431}"><![CDATA[]]></node>
+ #timer default set to 0 
+  timer.period[0]=0
+  timer.period[1]= 0
+ 
+ #set led default to off
+ call leds.bottom.right(0,0,0)
+ call leds.bottom.left(0,0,0)
+ call leds.top(0,0,0)
+
+  #here we init robot movement with remote control
+onevent rc5
+ if (rc5.command == 12)then
+ 	call leds.top(31,31,12) #change color code to specified	
+ 	motor.left.target = 1000
+ 	motor.right.target = 1000
+end
+#halt robot movement on remote signal 13 or 80
+ if (rc5.command == 13 or rc5.command == 80) then
+ 	call leds.top(31,0,0) # change color to red on remote signal 13
+ 	motor.left.target = 0
+ 	motor.right.target = 0
+ 	timer.period[0] = 0
+ 	timer.period[1] = 0
+ 	isMoving = 0 #set moving to false
+ end
+ 
+ #backward movement on remote signal 81
+ if (rc5.command == 81) then
+ 	motor.left.target = -1000
+ 	motor.right.target = -1000
+ end
+ 
+ #forward movement on remote signal 80
+  if (rc5.command == 80) then
+ 	motor.left.target = 1000
+ 	motor.right.target = 1000
+ end
+ 
+ 
+ #right movement on remote signal 86
+ if (rc5.command == 86) then
+ 	 #init timer value for 400 miliseconds
+        timer.period[0] = 400
+        #turn right 
+ 		motor.left.target =100
+ 		motor.right.target =-100
+ 	end
+ 
+ 
+  #left movement on remote signal 85
+   if (rc5.command == 85) then
+   #init timer value for 400 miliseconds
+    timer.period[0] = 400
+    #turn in left wheel direction
+ 	motor.left.target = -100
+ 	motor.right.target = 100
+ end
+ 
+ onevent timer0
+ 	timer.period[0] = 0
+ 	motor.left.target = 1000
+ 	motor.right.target = 1000
+ 	
+ 	
+ 	#obstacle avoidance
+onevent prox	
+#obstacle detected at right sensor 0			
+		if (prox.horizontal[0] > 1000) then
+		call leds.bottom.left(0,31,31)
+		motor.left.target = -100
+		motor.right.target = 100
+		isMoving =1
+		elseif (prox.horizontal[4] > 1000) then
+		call leds.bottom.right(0,1,31)
+		motor.left.target = -100
+		motor.right.target = 100
+	    isMoving =1
+	#go forward if not obstacle
+	elseif (isMoving != 0 ) then
+	call leds.bottom.right(0,0,0)
+		call leds.bottom.left(0,0,0)
+		motor.left.target = 900
+		motor.right.target = 900
+	end
+ 	
+		
+	]]></node>
 
 
 </network>
