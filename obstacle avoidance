@@ -5,8 +5,9 @@
 <!--list of global events-->
 
 
-<!--node Thymio II 0 on DXB-L1FCCQN2 - 15664-->
-<node nodeId="{31ace2a6-e62e-4265-ae99-e82d0dc87123}" name="Thymio II 0 on DXB-L1FCCQN2 - 15664"><![CDATA[#Collision Avoidance
+<!--node Taa on DXB-L1FCCQN2 - 11892-->
+<node nodeId="{de0dec7e-1c1b-41e0-bec6-7dde3efedb30}" name="Taa on DXB-L1FCCQN2 - 11892"><![CDATA[# this code seems to work better than others
+#Collision Avoidance
 #Robot is intended to avoid obstacles and give feedback obstacle in range of sensor readings
 var staticSensorThreshold = 3200
 var sensorFrontMax = 0 
@@ -105,8 +106,8 @@ if (shouldMove == 1) then
 	call leds.top(0,31,0)
 	if (sensorFrontMax < 900) then # only moves forward when no sensor readings higher than 0
 			call leds.top(0,31,0)
-			motor.left.target = 500
-			motor.right.target = 500
+			motor.left.target = 2000
+			motor.right.target = 2000
 			reverseFromRight = 0
 			reverseFromLeft = 0
 	 	elseif (prox.horizontal[1] > 900) then
@@ -140,12 +141,12 @@ if (shouldMove == 1) then
 end
 
 if (countRightSteps > 2) then
-	motor.right.target = 200
-	motor.left.target = 200
+	motor.right.target = 900
+	motor.left.target = 900
 	countRightSteps = 0
 elseif (countLeftSteps  > 2) then
-	motor.right.target = 200
-	motor.left.target = 200
+	motor.right.target = 900
+	motor.left.target = 900
 	countLeftSteps = 0
 elseif (countFrontSteps == 1) then
 	motor.right.target = -200
