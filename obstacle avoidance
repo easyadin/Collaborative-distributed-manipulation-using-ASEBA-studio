@@ -6,7 +6,7 @@
 
 
 <!--node Thymio-II Wireless-->
-<node nodeId="{d2296ad0-cbf6-4c78-8465-79e195d4de4b}" name="Thymio-II Wireless"><![CDATA[
+<node nodeId="{d2296ad0-cbf6-4c78-8465-79e195d4de4b}" name="Thymio-II Wireless"><![CDATA[# this code seems to work better than others
 #Collision Avoidance
 #Robot is intended to avoid obstacles and give feedback obstacle in range of sensor readings
 var staticSensorThreshold = 3200
@@ -171,7 +171,7 @@ elseif (countFrontSteps > 1) then
 end
 
 
-if (sensorFrontMax > 4000) then
+if (sensorFrontMax > 3000) then
 	initiateReverse++
 end
 
@@ -183,7 +183,7 @@ if(initiateReverse >2) then
 	reverseProtocal++
 end
 
-if (reverseProtocal > 5) then
+if (reverseProtocal > 3) then
 	motor.right.target = 900
 	motor.left.target = 900
 	reverseProtocal=0
