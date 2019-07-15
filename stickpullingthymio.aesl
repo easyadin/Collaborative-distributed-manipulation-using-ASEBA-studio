@@ -15,6 +15,8 @@ var lockOnTarget1 = 0
 var timerWait = 0
 var timerCounter = 0 
 
+var foundThymio = 0
+
 var i = 0
 
 var nearByThymioWorker[2]
@@ -101,11 +103,8 @@ end
 
 onevent prox.comm
 #-------------recieve signal from nearby Thymio Worker------------------
-nearByThymioWorker[0] = prox.comm.rx
-nearByThymioWorker[1] =  prox.comm.rx
 
-
-
+foundThymio = prox.comm.rx
 
 	if (collaborationSuccessful == 0) then
 		
@@ -113,25 +112,33 @@ nearByThymioWorker[1] =  prox.comm.rx
 	#-------------thymio beacon receives signal from nearby thymio worker
 	#-----------only two thymioWorkers can be acknowledged----------
 	if (thymioWorker1 == 0) then # assign first signal received to thymioWorker1
-		thymioWorker1 = prox.comm.rx
-		lockOnTarget1 = 1
+		thymioWorker1 = foundThymio
+		nearByThymioWorker[0] = thymioWorker1
 	end
-	
-		#assign second signal to thymioWorker2
-	if (thymioWorker1 == 0 and lockOnTarget1 == 1) then
-		thymioWorker2 = prox.comm.rx
+
+	if (thymioWorker1 !=0 and thymioWorker2 == 0) then
+			thymioWorker2 = foundThymio
+			#---verify thymioWorker2 if the signal recieved is different from thymioWorker1
+			if (thymioWorker2 == thymioWorker1) then
+				thymioWorker2 = 0
+			else
+				nearByThymioWorker[1] = thymioWorker2
+			end
 	end
 		
-	if (thymioWorker1 !=0 and thymioWorker2 !=0 and thymioWorker1 != thymioWorker2) then
+	if (thymioWorker1 !=0 and thymioWorker2 !=0 and thymioWorker1 != thymioWorker2 and nearByThymioWorker[0] != nearByThymioWorker[1]) then
 	collaborationSuccessful = 1
 end
 
-#------------check for successful colloboration of two thymioWorker with thymio beacon---------------------
-if(collaborationSuccessful ==1)then
-	prox.comm.tx = 20
+#------------check for successful colloboration of two thymioWorker with thymio beacon---------------------	
+end
 
+if(collaborationSuccessful == 1)then
+	prox.comm.tx = 20
+	timer.period[1] =0
+	timer.period[0] =0
 call sound.system(-1)
-call leds.top(0,0,0) 	
+call leds.top(0,32,0) 	
 call leds.bottom.left(0,0,0)
 call leds.bottom.right(0,0,0)
 call leds.buttons(0,0,0,0)
@@ -141,7 +148,6 @@ call leds.prox.v(0,0)
 call leds.rc(0)
 call leds.sound(0)
 call leds.temperature(0,0)	
-end	
 end]]></node>
 
 
