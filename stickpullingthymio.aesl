@@ -6,16 +6,21 @@
 
 
 <!--node Thymio-II Wireless-->
-<node name="Thymio-II Wireless" nodeId="{2de4da18-37cc-4f0b-bd3a-1039ac0a0155}"><![CDATA[# Stick pulling0 Experiment
+<node nodeId="{eb748b91-3bf5-4414-b967-89213012ddf0}" name="Thymio-II Wireless"><![CDATA[# Stick pulling0 Experiment
 #------------------Thymio Beacon-------------------------
 
 var thymioWorker1 = 0 #first nearby thymio
 var thymioWorker2 = 0 #second neaby thymio
-var lockOnTarget1 = 0
+
+var worker1 = 0
+var worker2 = 0
+
+
 var timerWait = 0
 var timerCounter = 0 
 
 var foundThymio = 0
+var countThymioWorkerFound = 0
 
 var i = 0
 
@@ -101,6 +106,9 @@ end
 
 #--------------------------------Thymio Beacon communication with nearBy thymio-worker------------------------------------------------
 
+#------------count number of Thymio workers found-------------
+countThymioWorkerFound = worker1 + worker2
+
 onevent prox.comm
 #-------------recieve signal from nearby Thymio Worker------------------
 
@@ -114,6 +122,12 @@ foundThymio = prox.comm.rx
 	if (thymioWorker1 == 0) then # assign first signal received to thymioWorker1
 		thymioWorker1 = foundThymio
 		nearByThymioWorker[0] = thymioWorker1
+				worker1++
+		
+		if (worker1 == 1) then
+				prox.comm.tx = thymioWorker1
+				call sound.system(3)
+	end
 	end
 
 	if (thymioWorker1 !=0 and thymioWorker2 == 0) then
@@ -123,6 +137,12 @@ foundThymio = prox.comm.rx
 				thymioWorker2 = 0
 			else
 				nearByThymioWorker[1] = thymioWorker2
+						worker2++
+					if (worker2 == 1) then
+							prox.comm.tx = thymioWorker2
+							call sound.system(3)
+
+	end
 			end
 	end
 		
@@ -130,14 +150,17 @@ foundThymio = prox.comm.rx
 	collaborationSuccessful = 1
 end
 
-#------------check for successful colloboration of two thymioWorker with thymio beacon---------------------	
 end
+#-----------acknowledge the robot sending signal----------------------
+	
+	
 
+#------------check for successful colloboration of two thymioWorker with thymio beacon---------------------	
 if(collaborationSuccessful == 1)then
+	call sound.system(7)
 	prox.comm.tx = 20
 	timer.period[1] =0
 	timer.period[0] =0
-call sound.system(-1)
 call leds.top(0,32,0) 	
 call leds.bottom.left(0,0,0)
 call leds.bottom.right(0,0,0)
@@ -152,11 +175,10 @@ end]]></node>
 
 
 <!--node Thymio-II Wireless-->
-<node name="Thymio-II Wireless" nodeId="{b0c15a05-1cd9-46e7-b571-56ffea1b34be}"><![CDATA[#------------------------------Thymio Worker---------------------------------------
+<node nodeId="{0911bdc7-cfde-4208-9a66-eb29f6a82f75}" name="Thymio-II Wireless"><![CDATA[#------------------------------Thymio Worker---------------------------------------
 
 var thymioBeaconID = 022
 var thymioWorker = 01
-var comfirmCollaboration = 0
 
 call prox.comm.enable(1)
 prox.comm.tx = thymioWorker
@@ -166,20 +188,24 @@ call leds.top(0,0,32)
 onevent prox.comm
 	#------------listen for messages from thymioBeacon------------------------
 	
-	if (prox.comm.rx == 20) then
+	#-----------get confirmation from beacon---check if confirmation matches ID--------------
+	if (prox.comm.rx == thymioWorker) then
+		call leds.top(32,32,0)
+	elseif (prox.comm.rx == 20) then
 		call leds.top(0,32,0)
+		call prox.comm.enable(0)
 	else
 		call leds.top(0,0,32)
-
-	end]]></node>
+	end
+	
+	]]></node>
 
 
 <!--node Thymio-II Wireless-->
-<node name="Thymio-II Wireless" nodeId="{d5988dcc-d1f1-41e6-b549-fb45f42cf78d}"><![CDATA[#------------------------------Thymio Worker---------------------------------------
+<node nodeId="{3aef6270-f5af-4356-a500-40d581f47365}" name="Thymio-II Wireless"><![CDATA[#------------------------------Thymio Worker---------------------------------------
 
 var thymioBeaconID = 022
 var thymioWorker = 02
-var comfirmCollaboration = 0
 
 call prox.comm.enable(1)
 prox.comm.tx = thymioWorker
@@ -188,13 +214,15 @@ call leds.top(0,0,32)
 
 onevent prox.comm
 	#------------listen for messages from thymioBeacon------------------------
-	
-	if (prox.comm.rx == 20) then
+	#-----------get confirmation from beacon---check if confirmation matches ID--------------
+	if (prox.comm.rx == thymioWorker) then
+		call leds.top(32,32,0)
+	elseif (prox.comm.rx == 20) then
 		call leds.top(0,32,0)
+		call prox.comm.enable(0)
 	else
 		call leds.top(0,0,32)
-
-	end]]></node>
+		end]]></node>
 
 
 </network>
