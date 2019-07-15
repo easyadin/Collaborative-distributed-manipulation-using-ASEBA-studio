@@ -1,0 +1,106 @@
+<!DOCTYPE aesl-source>
+<network>
+
+
+<!--list of global events-->
+
+
+<!--node Thymio-II Wireless-->
+<node name="Thymio-II Wireless" nodeId="{2de4da18-37cc-4f0b-bd3a-1039ac0a0155}"><![CDATA[# Stick pulling0 Experiment
+#------------------Thymio Beacon-------------------------
+
+var thymioWorker1 = 0 #first nearby thymio
+var thymioWorker2 = 0 #second neaby thymio
+
+var timerWait = 0
+var timerCounter = 0 
+
+var thymioBeaconID = 22 # thymio beacon id to emitted to nearby thymio-workers
+
+var collaborationSuccessful = 0 #if collaboration successful value = 1 else 0
+var timeOut = 0 # time out value 0 is default value, -1 timeOut 
+
+call prox.comm.enable(1) #Infrared communication opened
+prox.comm.tx = thymioBeaconID #Broadcast Thymio BeaconID
+
+#led lights display set to off
+call leds.bottom.left(32,0,0)
+call leds.bottom.right(32,0,0)
+call leds.buttons(32,0,0,0)
+call leds.top(32,0,0)
+call leds.circle(32,0,0,0,0,0,0,0)
+call leds.prox.h(32,0,0,0,0,0,0,0)
+call leds.prox.v(32,0)
+call leds.rc(32)
+call leds.sound(32)
+call leds.temperature(32,0)
+
+timer.period[0] = 200 
+timer.period[1] = 0
+call sound.system(-1)
+
+
+onevent timer0
+	
+	call sound.system(5)
+	timerCounter++
+	
+call leds.top(32,0,0) 	
+call leds.bottom.left(32,0,0)
+call leds.bottom.right(32,0,0)
+call leds.buttons(32,32,32,32)
+call leds.circle(32,32,32,32,32,32,32,32)
+call leds.prox.h(32,32,32,32,32,32,32,32)
+call leds.prox.v(32,32)
+call leds.rc(32)
+call leds.sound(32)
+call leds.temperature(32,32)	
+
+if (timerCounter > 0) then #timer sleeps
+	
+	timer.period[0] = 0 
+	timerCounter = 0
+	timer.period[1] = 500
+	
+call leds.top(32,0,0) 	
+call leds.bottom.left(32,0,0)
+call leds.bottom.right(32,0,0)
+call leds.buttons(32,32,32,32)
+call leds.circle(32,32,32,32,32,32,32,32)
+call leds.prox.h(32,32,32,32,32,32,32,32)
+call leds.prox.v(32,32)
+call leds.rc(32)
+call leds.sound(32)
+call leds.temperature(32,32)	
+end
+
+onevent timer1
+	timerWait++
+
+if (timerWait > 2) then
+		call sound.system(5)
+		timer.period[0] = 200 
+		timerWait = 0
+		
+call leds.top(0,0,0) 	
+call leds.bottom.left(0,0,0)
+call leds.bottom.right(0,0,0)
+call leds.buttons(0,0,0,0)
+call leds.circle(0,0,0,0,0,0,0,0)
+call leds.prox.h(0,0,0,0,0,0,0,0)
+call leds.prox.v(0,0)
+call leds.rc(0)
+call leds.sound(0)
+call leds.temperature(0,0)	
+end]]></node>
+
+
+<!--node Thymio-II Wireless-->
+<node name="Thymio-II Wireless" nodeId="{b0c15a05-1cd9-46e7-b571-56ffea1b34be}"><![CDATA[]]></node>
+
+
+<!--node Thymio-II Wireless-->
+<node name="Thymio-II Wireless" nodeId="{d5988dcc-d1f1-41e6-b549-fb45f42cf78d}"><![CDATA[]]></node>
+
+
+</network>
