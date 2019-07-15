@@ -11,11 +11,15 @@
 
 var thymioWorker1 = 0 #first nearby thymio
 var thymioWorker2 = 0 #second neaby thymio
-
+var lockOnTarget1 = 0
 var timerWait = 0
 var timerCounter = 0 
 
-var thymioBeaconID = 22 # thymio beacon id to emitted to nearby thymio-workers
+var i = 0
+
+var nearByThymioWorker[2]
+
+var thymioBeaconID = 022 # thymio beacon id to emitted to nearby thymio-workers
 
 var collaborationSuccessful = 0 #if collaboration successful value = 1 else 0
 var timeOut = 0 # time out value 0 is default value, -1 timeOut 
@@ -76,7 +80,6 @@ end
 
 onevent timer1
 	timerWait++
-
 if (timerWait > 2) then
 		call sound.system(5)
 		timer.period[0] = 200 
@@ -92,15 +95,100 @@ call leds.prox.v(0,0)
 call leds.rc(0)
 call leds.sound(0)
 call leds.temperature(0,0)	
+end
+
+#--------------------------------Thymio Beacon communication with nearBy thymio-worker------------------------------------------------
+
+onevent prox.comm
+#-------------recieve signal from nearby Thymio Worker------------------
+nearByThymioWorker[0] = prox.comm.rx
+nearByThymioWorker[1] =  prox.comm.rx
+
+
+
+
+	if (collaborationSuccessful == 0) then
+		
+	
+	#-------------thymio beacon receives signal from nearby thymio worker
+	#-----------only two thymioWorkers can be acknowledged----------
+	if (thymioWorker1 == 0) then # assign first signal received to thymioWorker1
+		thymioWorker1 = prox.comm.rx
+		lockOnTarget1 = 1
+	end
+	
+		#assign second signal to thymioWorker2
+	if (thymioWorker1 == 0 and lockOnTarget1 == 1) then
+		thymioWorker2 = prox.comm.rx
+	end
+		
+	if (thymioWorker1 !=0 and thymioWorker2 !=0 and thymioWorker1 != thymioWorker2) then
+	collaborationSuccessful = 1
+end
+
+#------------check for successful colloboration of two thymioWorker with thymio beacon---------------------
+if(collaborationSuccessful ==1)then
+	prox.comm.tx = 20
+
+call sound.system(-1)
+call leds.top(0,0,0) 	
+call leds.bottom.left(0,0,0)
+call leds.bottom.right(0,0,0)
+call leds.buttons(0,0,0,0)
+call leds.circle(0,0,0,0,0,0,0,0)
+call leds.prox.h(0,0,0,0,0,0,0,0)
+call leds.prox.v(0,0)
+call leds.rc(0)
+call leds.sound(0)
+call leds.temperature(0,0)	
+end	
 end]]></node>
 
 
 <!--node Thymio-II Wireless-->
-<node name="Thymio-II Wireless" nodeId="{b0c15a05-1cd9-46e7-b571-56ffea1b34be}"><![CDATA[]]></node>
+<node name="Thymio-II Wireless" nodeId="{b0c15a05-1cd9-46e7-b571-56ffea1b34be}"><![CDATA[#------------------------------Thymio Worker---------------------------------------
+
+var thymioBeaconID = 022
+var thymioWorker = 01
+var comfirmCollaboration = 0
+
+call prox.comm.enable(1)
+prox.comm.tx = thymioWorker
+
+call leds.top(0,0,32)
+
+onevent prox.comm
+	#------------listen for messages from thymioBeacon------------------------
+	
+	if (prox.comm.rx == 20) then
+		call leds.top(0,32,0)
+	else
+		call leds.top(0,0,32)
+
+	end]]></node>
 
 
 <!--node Thymio-II Wireless-->
-<node name="Thymio-II Wireless" nodeId="{d5988dcc-d1f1-41e6-b549-fb45f42cf78d}"><![CDATA[]]></node>
+<node name="Thymio-II Wireless" nodeId="{d5988dcc-d1f1-41e6-b549-fb45f42cf78d}"><![CDATA[#------------------------------Thymio Worker---------------------------------------
+
+var thymioBeaconID = 022
+var thymioWorker = 02
+var comfirmCollaboration = 0
+
+call prox.comm.enable(1)
+prox.comm.tx = thymioWorker
+
+call leds.top(0,0,32)
+
+onevent prox.comm
+	#------------listen for messages from thymioBeacon------------------------
+	
+	if (prox.comm.rx == 20) then
+		call leds.top(0,32,0)
+	else
+		call leds.top(0,0,32)
+
+	end]]></node>
 
 
 </network>
