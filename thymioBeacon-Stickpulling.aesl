@@ -1,12 +1,4 @@
-<!DOCTYPE aesl-source>
-<network>
-
-
-<!--list of global events-->
-
-
-<!--node Thymio-II Wireless-->
-<node nodeId="{eb748b91-3bf5-4414-b967-89213012ddf0}" name="Thymio-II Wireless"><![CDATA[# Stick pulling0 Experiment
+# Stick pulling0 Experiment
 #------------------Thymio Beacon-------------------------
 
 var thymioWorker1 = 0 #first nearby thymio
@@ -181,55 +173,3 @@ call leds.rc(0)
 call leds.sound(0)
 call leds.temperature(0,0)	
 end
-	
-	]]></node>
-
-
-<!--node Thymio-II Wireless-->
-<node nodeId="{3aef6270-f5af-4356-a500-40d581f47365}" name="Thymio-II Wireless"><![CDATA[
-	#------------------------------Thymio Worker---------------------------------------
-
-var thymioBeaconID = 022
-var thymioWorker = 01
-var timeOut = 404
-var timeOutCounter = 0
-var countDown = 0
-call prox.comm.enable(1)
-
-prox.comm.tx = thymioWorker
-
-call leds.top(0,0,32)
-
-onevent prox.comm
-	#------------listen for messages from thymioBeacon------------------------
-	
-	#-----------get confirmation from beacon---check if confirmation matches ID--------------
-	if (prox.comm.rx == thymioWorker) then
-		call leds.top(32,32,0)
-		#at this point thymioWorker receives its ID from the beacon
-			#init timer
-			countDown++ #counter for waiting time
-	elseif (prox.comm.rx == 20) then
-		call leds.top(0,32,0)
-		call prox.comm.enable(0)
-	else
-		call leds.top(0,0,32) #default to blue
-	end
-
-#---------------check is waiting time elapsed-----------
-if (countDown > 200) then	
-		call leds.top(32,0,0)
-		call prox.comm.enable(1)
-		prox.comm.tx = timeOut
-		timeOutCounter++
-end
-#------------------------------disable communication------------------------	
-if (timeOutCounter > 1) then
-						call prox.comm.enable(-1)
-						timeOutCounter = 0
-
-end
-]]></node>
-
-
-</network>
