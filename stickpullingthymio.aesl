@@ -6,15 +6,18 @@
 
 
 <!--node Thymio-II Wireless-->
-<node nodeId="{eb748b91-3bf5-4414-b967-89213012ddf0}" name="Thymio-II Wireless"><![CDATA[# Stick pulling0 Experiment
+<node name="Thymio-II Wireless" nodeId="{8b421767-d0f0-48b9-84c5-ba451505b350}"><![CDATA[# Stick pulling0 Experiment
 #------------------Thymio Beacon-------------------------
 
 var thymioWorker1 = 0 #first nearby thymio
 var thymioWorker2 = 0 #second neaby thymio
 
+var thymioResetActivated = 0
+var terminateCommunication = 0
 var worker1 = 0
 var worker2 = 0
 
+var restartCommunication = 0
 var errorMessage = 404
 
 var timerWait = 0
@@ -52,8 +55,8 @@ timer.period[1] = 0
 call sound.system(-1)
 
 
+#------------------end here------------------------------------------
 onevent timer0
-	
 	call sound.system(5)
 	timerCounter++
 	
@@ -69,7 +72,6 @@ call leds.sound(32)
 call leds.temperature(32,32)	
 
 if (timerCounter > 0) then #timer sleeps
-	
 	timer.period[0] = 0 
 	timerCounter = 0
 	timer.period[1] = 500
@@ -110,59 +112,27 @@ end
 #------------count number of Thymio workers found-------------
 countThymioWorkerFound = worker1 + worker2
 
+
+
+#---------------------------------------<Beacon>-----<Communication>------------------------------------
 onevent prox.comm
-#-------------recieve signal from nearby Thymio Worker------------------
-
-foundThymio = prox.comm.rx
-
-	if (collaborationSuccessful == 0) then
-		
-	
-	#-------------thymio beacon receives signal from nearby thymio worker
-	#-----------only two thymioWorkers can be acknowledged----------
-	if (thymioWorker1 == 0 and prox.comm.rx !=errorMessage) then # assign first signal received to thymioWorker1
-		thymioWorker1 = foundThymio
-		nearByThymioWorker[0] = thymioWorker1
-				worker1++
-		#-----------acknowledge the robot sending signal----------------------
-		if (worker1 == 1) then
-				prox.comm.tx = thymioWorker1
-				call sound.system(3)
-				#-------------check for error message---------------
-				if (prox.comm.rx == 404) then
-					call sound.system(4)
-					#------------flush 404 errorMessage---------------------
-					nearByThymioWorker[1] = 0 #reset value
-					
-				end
+		#-------------beacon start communication and broadcast signal
+		callsub beaconCommunication
+#-------------------------reset nearByThymioWorker variable stored in Beacon is error message is recieved from # nearbythymio worker........
+# Error Messge 404 signfies that the nearby robot has given up waiting and resumed randonWalkState............
+	#check if 404 recieved
+	if (nearByThymioWorker[1] == 404) then
+	#intention here is to reset the values of the array below
+	# reset the values of prox.comm
+			nearByThymioWorker[0] = 0
+			nearByThymioWorker[1] = 0
+			thymioWorker1 = 0
+			thymioWorker2 = 0
+			worker1 =0
+			worker2 =0
+			countThymioWorkerFound =0
+			call sound.system(1)
 	end
-	end
-
-	if (thymioWorker1 !=0 and thymioWorker2 == 0) then
-			thymioWorker2 = foundThymio
-			#---verify thymioWorker2 if the signal recieved is different from thymioWorker1
-			if (thymioWorker2 == thymioWorker1) then
-				thymioWorker2 = 0
-			else
-				nearByThymioWorker[1] = thymioWorker2
-						worker2++
-				#-----------acknowledge the robot sending signal----------------------
-					if (worker2 == 1) then
-							prox.comm.tx = thymioWorker2
-							call sound.system(7)
-
-					end
-			end
-	end
-		
-	if (thymioWorker1 !=0 and thymioWorker2 !=0 and thymioWorker1 != thymioWorker2 and nearByThymioWorker[0] != nearByThymioWorker[1] 
-	and nearByThymioWorker[0] !=errorMessage and nearByThymioWorker[1] !=errorMessage) then
-	collaborationSuccessful = 1 
-end
-
-end
-	
-
 
 #------------check for successful colloboration of two thymioWorker with thymio beacon---------------------	
 if(collaborationSuccessful == 1)then
@@ -181,13 +151,56 @@ call leds.rc(0)
 call leds.sound(0)
 call leds.temperature(0,0)	
 end
+#---------------------------------------------------------------------------------------------------------------------------------------------
+
+#-------------------------------this subroutine is activated on prox.comm event in which the beacon will be able to recieve and pass message to nearby thymio robot-----
+sub beaconCommunication
+	#-------------recieve signal from nearby Thymio Worker------------------
+foundThymio = prox.comm.rx
+
+	if (collaborationSuccessful == 0) then
+	#-------------thymio beacon receives signal from nearby thymio worker
+	#-----------only two thymioWorkers can be acknowledged----------
+	if (thymioWorker1 == 0 and prox.comm.rx !=errorMessage and nearByThymioWorker[0] == 0) then # assign first signal received to thymioWorker1
+		thymioWorker1 = foundThymio
+		nearByThymioWorker[0] = thymioWorker1
+				worker1++
+		#-----------acknowledge the robot sending signal----------------------
+		if (worker1 == 1) then
+				prox.comm.tx = thymioWorker1
+				call sound.system(3)
+	end
+	end
+
+	if (thymioWorker1 !=0 and thymioWorker2 == 0 and nearByThymioWorker[1] == 0 ) then
+			thymioWorker2 = foundThymio
+			#---verify thymioWorker2 if the signal recieved is different from thymioWorker1
+			if (thymioWorker2 == thymioWorker1) then
+				thymioWorker2 = 0
+			else
+				nearByThymioWorker[1] = thymioWorker2
+						worker2++
+				#-----------acknowledge the robot sending signal----------------------
+					if (worker2 == 1) then
+							prox.comm.tx = thymioWorker2
+							call sound.system(7)
+					end
+			end
+	end
 	
-	]]></node>
+	if (thymioWorker1 !=0 and thymioWorker2 !=0 and thymioWorker1 != thymioWorker2 and nearByThymioWorker[0] != nearByThymioWorker[1] 
+	and nearByThymioWorker[0] !=errorMessage and nearByThymioWorker[1] !=errorMessage and nearByThymioWorker[0] !=0 and nearByThymioWorker[1] != 0) then
+	collaborationSuccessful = 1 
+	end
+
+end
+
+
+]]></node>
 
 
 <!--node Thymio-II Wireless-->
-<node nodeId="{3aef6270-f5af-4356-a500-40d581f47365}" name="Thymio-II Wireless"><![CDATA[
-	#------------------------------Thymio Worker---------------------------------------
+<node name="Thymio-II Wireless" nodeId="{66fded79-b9db-46e2-9000-615f53e00374}"><![CDATA[#------------------------------Thymio Worker---------------------------------------
 
 var thymioBeaconID = 022
 var thymioWorker = 01
@@ -225,11 +238,55 @@ if (countDown > 200) then
 end
 #------------------------------disable communication------------------------	
 if (timeOutCounter > 1) then
-						call prox.comm.enable(-1)
+						call prox.comm.enable(0)
 						timeOutCounter = 0
 
+end]]></node>
+
+
+<!--node Thymio-II Wireless-->
+<node name="Thymio-II Wireless" nodeId="{23dea047-9ef1-452e-827d-1e8c94e10754}"><![CDATA[#------------------------------Thymio Worker---------------------------------------
+
+var thymioBeaconID = 022
+var thymioWorker = 02
+var timeOut = 404
+var timeOutCounter = 0
+var countDown = 0
+call prox.comm.enable(1)
+
+prox.comm.tx = thymioWorker
+
+call leds.top(0,0,32)
+
+onevent prox.comm
+	#------------listen for messages from thymioBeacon------------------------
+	
+	#-----------get confirmation from beacon---check if confirmation matches ID--------------
+	if (prox.comm.rx == thymioWorker) then
+		call leds.top(32,32,0)
+		#at this point thymioWorker receives its ID from the beacon
+			#init timer
+			countDown++ #counter for waiting time
+	elseif (prox.comm.rx == 20) then
+		call leds.top(0,32,0)
+		call prox.comm.enable(0)
+	else
+		call leds.top(0,0,32) #default to blue
+	end
+
+#---------------check is waiting time elapsed-----------
+if (countDown > 200) then	
+		call leds.top(32,0,0)
+		call prox.comm.enable(1)
+		prox.comm.tx = timeOut
+		timeOutCounter++
 end
-]]></node>
+#------------------------------disable communication------------------------	
+if (timeOutCounter > 1) then
+						call prox.comm.enable(0)
+						timeOutCounter = 0
+
+end]]></node>
 
 
 </network>
