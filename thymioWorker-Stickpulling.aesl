@@ -1,7 +1,7 @@
 #------------------------------Thymio Worker---------------------------------------
 
 var thymioBeaconID = 022
-var thymioWorker = 01
+var thymioWorker = 02
 var timeOut = 404
 var timeOutCounter = 0
 var countDown = 0
@@ -36,7 +36,7 @@ if (countDown > 200) then
 end
 #------------------------------disable communication------------------------	
 if (timeOutCounter > 1) then
-						call prox.comm.enable(-1)
+						call prox.comm.enable(0)
 						timeOutCounter = 0
 
 end
