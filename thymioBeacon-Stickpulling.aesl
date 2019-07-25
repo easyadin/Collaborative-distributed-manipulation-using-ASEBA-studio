@@ -4,6 +4,8 @@
 var thymioWorker1 = 0 #first nearby thymio
 var thymioWorker2 = 0 #second neaby thymio
 
+var countToSelfDestruct = 0
+var closeCommunicationOnCollaborationSuccessful = 0
 var thymioResetActivated = 0
 var terminateCommunication = 0
 var worker1 = 0
@@ -22,7 +24,7 @@ var i = 0
 
 var nearByThymioWorker[2]
 
-var thymioBeaconID = 022 # thymio beacon id to emitted to nearby thymio-workers
+var thymioBeaconID = 101 # thymio beacon id to emitted to nearby thymio-workers
 
 var collaborationSuccessful = 0 #if collaboration successful value = 1 else 0
 var timeOut = 0 # time out value 0 is default value, -1 timeOut 
@@ -80,6 +82,7 @@ call leds.sound(32)
 call leds.temperature(32,32)	
 end
 
+#--------------------timer 1
 onevent timer1
 	timerWait++
 if (timerWait > 2) then
@@ -98,7 +101,11 @@ call leds.rc(0)
 call leds.sound(0)
 call leds.temperature(0,0)	
 end
-
+# intention here is to turn off beacon when colloboration is successful and complete
+if (closeCommunicationOnCollaborationSuccessful == 1) then
+	timer.period[1] = 99  #init timer for 99 ms
+	call leds.top(0,0,32)
+end
 #--------------------------------Thymio Beacon communication with nearBy thymio-worker------------------------------------------------
 
 #------------count number of Thymio workers found-------------
@@ -147,6 +154,7 @@ end
 
 #-------------------------------this subroutine is activated on prox.comm event in which the beacon will be able to recieve and pass message to nearby thymio robot-----
 sub beaconCommunication
+
 	#-------------recieve signal from nearby Thymio Worker------------------
 foundThymio = prox.comm.rx
 
@@ -180,11 +188,24 @@ foundThymio = prox.comm.rx
 			end
 	end
 	
+	# collaboration successful ---------
 	if (thymioWorker1 !=0 and thymioWorker2 !=0 and thymioWorker1 != thymioWorker2 and nearByThymioWorker[0] != nearByThymioWorker[1] 
 	and nearByThymioWorker[0] !=errorMessage and nearByThymioWorker[1] !=errorMessage and nearByThymioWorker[0] !=0 and nearByThymioWorker[1] != 0) then
 	collaborationSuccessful = 1 
+	closeCommunicationOnCollaborationSuccessful =1 
 	end
 
 end
 
-
+onevent prox
+	if (closeCommunicationOnCollaborationSuccessful ==1) then
+	countToSelfDestruct++
+	if (countToSelfDestruct > 99) then
+		call prox.comm.enable(0)
+		countToSelfDestruct =0
+		closeCommunicationOnCollaborationSuccessful = 0
+		call leds.top(0,0,0)
+	end
+	end
+	
+	
