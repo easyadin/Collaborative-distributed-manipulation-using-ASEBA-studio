@@ -21,9 +21,7 @@ var ACK_DESTINATION_ID = 0 # THIS IS RECIEVED FROM SERVICE DELIVERY
 var countSetTimer0 = 0
 var timerWait = 0
 var initTimer2ForSound = 0
-#[ FOR BBRS BEACON SOUND ]#
-timer.period[0] = 200
-call sound.system(5)
+
 #_________________________________________________________________________________________________________TIMER  0
 onevent timer0
 		if (init_BBRS_as_Sender ==1) then
@@ -51,13 +49,15 @@ onevent timer1
 					end
 			end
 					
-#____________________________________|
+#________________________________________________________________________________________________________REMOTE CONTROL
 #--------using remote control we can choose who will be SENDER  with value = 1 AND RECIEVER WITH value = 2
 onevent rc5
 	if (rc5.command == 1) then #------------INITIALISE THE BBRS TO BE THE SENDER
+#[ FOR BBRS BEACON SOUND ]#
+		timer.period[0] = 200
+		call sound.system(5)
 		init_BBRS_as_Sender = 1  # --set BBRS AS SENDER
 		init_BBRS_as_Reciever = 0#-----BBRS RECIEVE ABILITY DISABLED
-		
 		call prox.comm.enable(1)#----------ENABLE COMMUNICATION
 		prox.comm.tx = SENDER_ID#---------------BROADCAST OWN BBRS_ID
 	end	
@@ -68,5 +68,7 @@ onevent rc5
 		call prox.comm.enable(1) #---------------------ONLY REQUIRED TO RECIEVE AND NOT SEND MESSAGE
 		# reset default
 		call sound.system(-1)
+		timer.period[0] = 0
+		timer.period[1] = 0
 	end
 
