@@ -1,0 +1,72 @@
+#-------------------------THYMIO - BEACON - BROADCAST - RECIEVER OR  SENDER------- ACRONYM (BBRS)
+#-------------------- THERE ARE TWO MOST IMPORTANT BEHAVIOUR TO EXPECT FROM THE BBRS---------
+#-----------------  1. THYMIO HAS BROADCAST SENDER 
+#---------------------- FOR BBRS TO SEND MESSAGE FROM A KNOW BBRS_ID IT MUST PASSED THE MESSAGE TO A	TO DELIVERY SERVICE ROBOT
+
+#------------------ 2. THYMIO HAS BROADCAST RECIEVER 
+#----------------------------- FOR BBRS TO RECIEVE TO MESSAGE ITS ID MUST MATCH THE CORRESPONDING DESTINATION_ID BROADCASTED BY THE SERVICE DELIVERY
+
+var init_BBRS_as_Sender = 0
+var init_BBRS_as_Reciever = 0
+#-------------defualt variables--
+var BBRS_ID = 54 
+var SENDER_ID = BBRS_ID
+var DESTINATION_ID = 55 # THIS VARIABLE IS ASSOCIATED TO A KNOWN BBRS WITH ID 55
+
+#----------required ACKS FROM SERVICE DELIVERY to ensure message has being passed
+var ACK_SENDER_ID = 0 # THIS IS RECIVED FROM SERVICE DELIVERY
+var ACK_DESTINATION_ID = 0 # THIS IS RECIEVED FROM SERVICE DELIVERY
+
+#__________________________________________________________________________________________VARIABLE COUNTER FOR TIMERS
+var countSetTimer0 = 0
+var timerWait = 0
+var initTimer2ForSound = 0
+#[ FOR BBRS BEACON SOUND ]#
+timer.period[0] = 200
+call sound.system(5)
+#_________________________________________________________________________________________________________TIMER  0
+onevent timer0
+		if (init_BBRS_as_Sender ==1) then
+			call sound.system(5)
+			countSetTimer0++
+			call leds.top(32,0,0) 	
+		
+			if (countSetTimer0 > 0) then
+				call leds.top(0,0,0) 	
+				timer.period[0] = 0 # timer sleep
+				initTimer2ForSound =1 # variable required so that timer 1 is reusable
+				timer.period[1] = 500 # init timer 1
+			end
+		end
+	
+#___________________________________________________________________________________________________________TIMER 1
+onevent timer1
+			if (initTimer2ForSound == 1) then
+				timerWait++
+					if (timerWait > 2) then
+							call leds.top(32,0,0) 	
+							call sound.system(5)
+							timer.period[0] = 200 
+							timerWait = 0
+					end
+			end
+					
+#____________________________________|
+#--------using remote control we can choose who will be SENDER  with value = 1 AND RECIEVER WITH value = 2
+onevent rc5
+	if (rc5.command == 1) then #------------INITIALISE THE BBRS TO BE THE SENDER
+		init_BBRS_as_Sender = 1  # --set BBRS AS SENDER
+		init_BBRS_as_Reciever = 0#-----BBRS RECIEVE ABILITY DISABLED
+		
+		call prox.comm.enable(1)#----------ENABLE COMMUNICATION
+		prox.comm.tx = SENDER_ID#---------------BROADCAST OWN BBRS_ID
+	end	
+	if (rc5.command == 2 ) then #------------INITIALISE THE BBRS TO BE THE RECIEVER
+		init_BBRS_as_Reciever =1 #--------enable BBRS AS RECIEVER
+		init_BBRS_as_Sender = 0 # -------------BBRS SENDER ABILITY DISABLED
+		call leds.top(32,32,32)
+		call prox.comm.enable(1) #---------------------ONLY REQUIRED TO RECIEVE AND NOT SEND MESSAGE
+		# reset default
+		call sound.system(-1)
+	end
+
