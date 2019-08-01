@@ -3,25 +3,54 @@
 #__________________REQUIRED INFORMATION FROM BBRS_____[ SENDER_ID, DESTINATION_ID ]_________________________
 #____________________DELIVERY SERVICE MUST SEND ___[ACK_SENDER_ID, ACK_DESTINATION_ID]______________________
 
-var find_BBRS = 0 # determines if robot starts it program or not
+var find_SENDER_BBRS = 0 # determines if robot starts it program or not
+var BBRS_found_Successful = 0 # this variable tells when BBRS is found and all required data has being received and passed
 var SENDER_ID = 0 # TO BE RECIEVED FROM BBRS
 var DESTINATION_ID = 0 # TO BE RECIEVED FROM BBRS
 var ACK_SENDER_ID = 0 # TO BE SENT TO BBSR
 var ACK_DESTINATION_ID =0# TO BE SENT BBSR
-
+var REQUIRED_DETAILS_RECEIVED = 0
+var getISBBRS_IN_RANGE = 0
+#_______________________________________________________________________________VARIABLE CCONDITION IF BBRS IN RANGE
+var isBBRS_IN_RANGE = 0 # DS CHECKS IF BBRS IN RANGE EVERY 5s , it turns 1 if in range
+var areYOU_IN_RANGE = 0 
+var waitTillLastAckSent = 0
+var temp_var_prox.comm.rx_for_isBBRS_range = 0
 #________________________________________________________________________SET DEFAULT BEHAVIOUR
 call prox.comm.enable(0)
-
 #________________________________________________________________________REMOTE CONTROL
 onevent rc5
 	if (rc5.command == 53) then # remote control signal to initiate program execution
-		find_BBRS = 1
+		find_SENDER_BBRS = 1
 		call prox.comm.enable(1)
 	end	
+	if (rc5.command == 16) then # reset from beacon trigger
+		timer.period[0] = 0
+		waitTillLastAckSent = 0
+	end
+#____________________________________________________________________________________TIMER 0
+onevent timer0
+		waitTillLastAckSent++  #increment in range value for 5s
+		if (BBRS_found_Successful == 1 and  waitTillLastAckSent > 100) then # check if all required details received from BBRS
+			prox.comm.tx = ACK_SENDER_ID + 1
+				# get BBRS in range reply
+			 temp_var_prox.comm.rx_for_isBBRS_range =  prox.comm.rx 
+			if (temp_var_prox.comm.rx_for_isBBRS_range ==  ACK_SENDER_ID + 1 ) then
+				waitTillLastAckSent = 0
+				prox.comm.tx = ACK_SENDER_ID + 1
+				call sound.system(5) # make some noise
+				prox.comm.tx = 0
+				temp_var_prox.comm.rx_for_isBBRS_range = 0
+			end
+		end
+		if (waitTillLastAckSent > 99) then
+						prox.comm.tx = ACK_SENDER_ID + 1
+					end
+		
 #_________________________________________________________________________ COMMUNICATION EVENT
 onevent prox.comm
-	if (find_BBRS == 1) then
-		if (SENDER_ID == 0 ) then #________________________________________________ ACCEPT MESSAGE FROM BBRS IF SENDER_ID === 0
+	if (find_SENDER_BBRS == 1) then
+		if (SENDER_ID == 0) then #________________________________________________ ACCEPT MESSAGE FROM BBRS IF SENDER_ID === 0
 			SENDER_ID = prox.comm.rx # store SENDER_ID recieved
 			call leds.top(32,32,0) # turn yellow
 			ACK_SENDER_ID =  (SENDER_ID + 1000)
@@ -32,8 +61,21 @@ onevent prox.comm
 			DESTINATION_ID = prox.comm.rx # save the destination id
 			ACK_DESTINATION_ID = (DESTINATION_ID + 1001)
 			prox.comm.tx = ACK_DESTINATION_ID # send ack for destination id
+			BBRS_found_Successful = 1
 			call leds.top(0,32,0)
+			areYOU_IN_RANGE = ACK_SENDER_ID # Set in range value for DS TO ASK BBRS SUBSEQUENTLY
+			timer.period[0] = 200 # init timer
 		end
 	end
+	
+	if (BBRS_found_Successful == 1) then
+			find_SENDER_BBRS =0
+	end
+#__________________________________________________________________________NETWORK CHAIN FORMATION 
+
+
+
+
+
 
 

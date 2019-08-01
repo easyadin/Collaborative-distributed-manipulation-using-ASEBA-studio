@@ -5,7 +5,7 @@
 
 #------------------ 2. THYMIO HAS BROADCAST RECEIVER
 #----------------------------- FOR BBRS TO RECEIVE TO MESSAGE ITS ID MUST MATCH THE CORRESPONDING DESTINATION_ID BROADCASTED BY THE SERVICE DELIVERY
-
+var init_RESET = 0
 var init_BBRS_as_Sender = 0
 var init_BBRS_as_Reciever = 0
 #-------------default variables--
@@ -17,7 +17,6 @@ var messagePassedToDeliveryService = 0
 #----------required ACKS FROM SERVICE DELIVERY to ensure message has being passed
 var ACK_SENDER_ID = 0 # THIS IS RECEIVED FROM SERVICE DELIVERY
 var ACK_DESTINATION_ID = 0 # THIS IS RECEIVED FROM SERVICE DELIVERY
-var COUNTER_BEFORE_NEXT_ACK = 0
 #__________________________________________________________________________________________VARIABLE COUNTER FOR TIMERS
 var countSetTimer0 = 0
 var timerWait = 0
@@ -75,31 +74,48 @@ onevent rc5
 		timer.period[0] = 0
 		timer.period[1] = 0
 	end
-
+#-------------------------------------RESET __________ALL VALUES SET TO ZERO AND NO SELECTION EITHER AS SENDER OR RECEIVER
+if (rc5.command == 16) then
+	init_BBRS_as_Sender = 0
+	init_BBRS_as_Reciever = 0 
+	ACK_SENDER_ID  = 0
+	ACK_DESTINATION_ID = 0
+	messagePassedToDeliveryService = 0
+	call prox.comm.enable(0)
+	call leds.top(32,32,32)
+end
 #_+______________________________________________________________________________________________PROX EVENT TO SEND AND RECIEVE MESSAGE
 
 onevent prox.comm
 			if (init_BBRS_as_Sender == 1) then #------------------------------------------------------------------------------- BEHAVIOUR HAS A BROADCAST SENDER
-					#-------------------------broadcast own BBRS_id
-				prox.comm.tx = SENDER_ID
-				#-------------------------------check for ack from delivery service
-				if (prox.comm.rx == (SENDER_ID + 1000) ) then
-					call leds.top(32,32,0) # top led turns yellow
-					ACK_SENDER_ID = (SENDER_ID + 1000) # save the sender_id ack state
-					prox.comm.tx = DESTINATION_ID # IF ACK_SENDER_ID RECIEVED SEND DESTINATION_ID
-					COUNTER_BEFORE_NEXT_ACK++
-				end
-				if (prox.comm.rx == (DESTINATION_ID + 1001)) then
-					call leds.top(0,32,0) # top turns green indicating successful
-					ACK_DESTINATION_ID = (DESTINATION_ID + 1001) # save the destination_id ack state
-					messagePassedToDeliveryService = 1
-				end
-				#if message passed succesfully to delivery service shutoff sound
-				if (messagePassedToDeliveryService ==1) then
-					init_BBRS_as_Sender = 0
-					call leds.top(0,32,0) 
-				end
+						#-------------------------broadcast own BBRS_id
+					prox.comm.tx = SENDER_ID
+					#-------------------------------check for ack from delivery service
+					if (prox.comm.rx == (SENDER_ID + 1000) ) then
+						call leds.top(32,32,0) # top led turns yellow
+						ACK_SENDER_ID = (SENDER_ID + 1000) # save the sender_id ack state
+						prox.comm.tx = DESTINATION_ID # IF ACK_SENDER_ID RECIEVED SEND DESTINATION_ID
+					end
+					if (prox.comm.rx == (DESTINATION_ID + 1001)) then
+						call leds.top(0,32,0) # top turns green indicating successful
+						ACK_DESTINATION_ID = (DESTINATION_ID + 1001) # save the destination_id ack state
+						messagePassedToDeliveryService = 1
+							#if message passed succesfully to delivery service shutoff sound
+							if (messagePassedToDeliveryService ==1) then
+								init_BBRS_as_Sender = 0
+								call leds.top(0,32,0) 
+							end
+					end
+			end
+			
+# + ______________________________________REPLY TO DELIVERY SERVICE IF ASKED FOR VALUE isBBRS_IN_RANGE	
+if (prox.comm.rx == ACK_SENDER_ID + 1 and  messagePassedToDeliveryService ==1 and init_BBRS_as_Sender == 0 and init_BBRS_as_Reciever !=1) then
+	call sound.system(5) # make some noise to confirm message
+	prox.comm.tx = ACK_SENDER_ID + 1 # reply with same message
 end
+
+
+
 if (init_BBRS_as_Reciever == 1) then #---------------------------------------------------------------------------------------------BEHAVIOUR HAS A BROADCAST RECEIVER
 	
 end
