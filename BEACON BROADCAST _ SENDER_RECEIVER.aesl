@@ -81,7 +81,7 @@ if (rc5.command == 16) then
 	ACK_SENDER_ID  = 0
 	ACK_DESTINATION_ID = 0
 	messagePassedToDeliveryService = 0
-	call prox.comm.enable(0)
+	prox.comm.tx = 405 # notify DS of reset activated 405 reset code
 	call leds.top(32,32,32)
 end
 #_+______________________________________________________________________________________________PROX EVENT TO SEND AND RECIEVE MESSAGE
