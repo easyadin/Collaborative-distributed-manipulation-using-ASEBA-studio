@@ -1,0 +1,39 @@
+  #___________________________THYMIO ROBOT AS DELIVERY SERVICE__________________________
+#_________________-FOR SUCCESSFUL DELIVERY TO DESTINATION the following is required by the DS (DELIVERY SERVICE)
+#__________________REQUIRED INFORMATION FROM BBRS_____[ SENDER_ID, DESTINATION_ID ]_________________________
+#____________________DELIVERY SERVICE MUST SEND ___[ACK_SENDER_ID, ACK_DESTINATION_ID]______________________
+
+var find_BBRS = 0 # determines if robot starts it program or not
+var SENDER_ID = 0 # TO BE RECIEVED FROM BBRS
+var DESTINATION_ID = 0 # TO BE RECIEVED FROM BBRS
+var ACK_SENDER_ID = 0 # TO BE SENT TO BBSR
+var ACK_DESTINATION_ID =0# TO BE SENT BBSR
+
+#________________________________________________________________________SET DEFAULT BEHAVIOUR
+call prox.comm.enable(0)
+
+#________________________________________________________________________REMOTE CONTROL
+onevent rc5
+	if (rc5.command == 53) then # remote control signal to initiate program execution
+		find_BBRS = 1
+		call prox.comm.enable(1)
+	end	
+#_________________________________________________________________________ COMMUNICATION EVENT
+onevent prox.comm
+	if (find_BBRS == 1) then
+		if (SENDER_ID == 0 ) then #________________________________________________ ACCEPT MESSAGE FROM BBRS IF SENDER_ID === 0
+			SENDER_ID = prox.comm.rx # store SENDER_ID recieved
+			call leds.top(32,32,0) # turn yellow
+			ACK_SENDER_ID =  (SENDER_ID + 1000)
+			prox.comm.tx = ACK_SENDER_ID
+		end	
+		# receive destination id
+		if (SENDER_ID !=0 and prox.comm.rx != SENDER_ID) then
+			DESTINATION_ID = prox.comm.rx # save the destination id
+			ACK_DESTINATION_ID = (DESTINATION_ID + 1001)
+			prox.comm.tx = ACK_DESTINATION_ID # send ack for destination id
+			call leds.top(0,32,0)
+		end
+	end
+
+
