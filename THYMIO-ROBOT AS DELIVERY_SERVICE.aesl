@@ -2,164 +2,104 @@
 #_________________-FOR SUCCESSFUL DELIVERY TO DESTINATION the following is required by the DS (DELIVERY SERVICE)
 #__________________REQUIRED INFORMATION FROM BBRS_____[ SENDER_ID, DESTINATION_ID ]_________________________
 #____________________DELIVERY SERVICE MUST SEND ___[ACK_SENDER_ID, ACK_DESTINATION_ID]______________________
-#_________________________________VALUE FOR CHAIN FORMATION___________________________
-var LEFT = 0
-var RIGHT = 0
-var FORWARD  = 0
-var BACKWARD = 0
-var FRONT_SENSOR_SUM = 0
-var SUM_OF_SENSOR_1_2_3 = 0
 
-var INIT_CHAIN_FORMATION = 0
-var GET_PREV_POSITION = 0 # get the previous position to increment own position and determine which path to follow
-var NEXT_POSITION = 0
-var MY_POSITION = 0 # own position
-var I_ALREADY_FOUND_BBRS = 1 # CHANGE THIS VARIABLE TO VALUE OF ~~~~~~ BBRS_found_Successful ~~~~~~~~~
-var SEARCH_MODE = 0
 var find_SENDER_BBRS = 0 # determines if robot starts it program or not
 var BBRS_found_Successful = 0 # this variable tells when BBRS is found and all required data has being received and passed
 var SENDER_ID = 0 # TO BE RECIEVED FROM BBRS
 var DESTINATION_ID = 0 # TO BE RECIEVED FROM BBRS
+var MESSAGE = 0
+var REQUIRED_DETAILS_RECEIVED = 0
+
 var ACK_SENDER_ID = 0 # TO BE SENT TO BBSR
 var ACK_DESTINATION_ID =0# TO BE SENT BBSR
-var REQUIRED_DETAILS_RECEIVED = 0
-var getISBBRS_IN_RANGE = 0
-#_______________________________________________________________________________VARIABLE CCONDITION IF BBRS IN RANGE
-var isBBRS_IN_RANGE = 0 # DS CHECKS IF BBRS IN RANGE EVERY 5s , it turns 1 if in range
-var areYOU_IN_RANGE = 0 
-var waitTillLastAckSent = 0
-var temp_var_prox.comm.rx_for_isBBRS_range = 0
+var ACK_MESSAGE = 0
+
+#------------------------------------------- 3 ACKS REQUIRED TO VERIFY THE VALUE PASSED BETWEEN BBRS AND DS
+var ACK_SENDER_ID_RCV = 0
+var ACK_DESTINATION_ID_RCV = 0
+var ACK_MESSAGE_ID_RCV = 0
+
+# THIS VARIABLE WILL HELP ENSURE THE ACKS COMPUTED ABOVE HAVE BEING CORRECTLY SENT
+var ACK_SENDER_ID_SENT = 0
+var ACK_DESTINATION_ID_SENT = 0
+var ACK_MESSAGE_ID_SENT = 0
+
+
 #________________________________________________________________________SET DEFAULT BEHAVIOUR
 call prox.comm.enable(0)
 #________________________________________________________________________REMOTE CONTROL
 onevent rc5
 	if (rc5.command == 53) then # remote control signal to initiate program execution
+		call prox.comm.enable(1)
 		find_SENDER_BBRS = 1
-		call prox.comm.enable(1)
+		call leds.top(32,32,32)
 	end	
-	
-	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ init chain formation
-	if (rc5.command  == 5) then
-		INIT_CHAIN_FORMATION = 1
-		call prox.comm.enable(1)
-	end
-#____________________________________________________________________________________TIMER 0
-onevent timer0
-		waitTillLastAckSent++  #increment in range value for 5s
-		if (BBRS_found_Successful == 1 and  waitTillLastAckSent > 100) then # check if all required details received from BBRS
-			prox.comm.tx = ACK_SENDER_ID + 1
-				# get BBRS in range reply
-			 temp_var_prox.comm.rx_for_isBBRS_range =  prox.comm.rx 
-			if (temp_var_prox.comm.rx_for_isBBRS_range ==  ACK_SENDER_ID + 1 ) then
-				waitTillLastAckSent = 0
-				prox.comm.tx = ACK_SENDER_ID + 1
-				call sound.system(5) # make some noise
-				prox.comm.tx = 0
-				temp_var_prox.comm.rx_for_isBBRS_range = 0
-			end
-		end
-		if (waitTillLastAckSent > 99) then
-			prox.comm.tx = ACK_SENDER_ID + 1
-		end
-		if (prox.comm.rx == 405) then
-			timer.period[0] = 0
-			call leds.top(32,32,32) # turn neutral
-		end
-		
+
 #_________________________________________________________________________ COMMUNICATION EVENT
 onevent prox.comm
-#~~~~~~~~~~~~{[ IMPORTANT COMPUTATION FOR AUTO SELF ALIGNMENT]}~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-
-#_________________________________________________________________________________________________________
-	if (find_SENDER_BBRS == 1) then
-		if (SENDER_ID == 0) then #________________________________________________ ACCEPT MESSAGE FROM BBRS IF SENDER_ID === 0
-			SENDER_ID = prox.comm.rx # store SENDER_ID recieved
-			call leds.top(32,32,0) # turn yellow
-			ACK_SENDER_ID =  (SENDER_ID + 1000)
-			prox.comm.tx = ACK_SENDER_ID
-		end	
-		# receive destination id
-		if (SENDER_ID !=0 and prox.comm.rx != SENDER_ID) then
-			DESTINATION_ID = prox.comm.rx # save the destination id
-			ACK_DESTINATION_ID = (DESTINATION_ID + 1001)
-			prox.comm.tx = ACK_DESTINATION_ID # send ack for destination id
-			BBRS_found_Successful = 1
-			call leds.top(0,32,0)
-			areYOU_IN_RANGE = ACK_SENDER_ID # Set in range value for DS TO ASK BBRS SUBSEQUENTLY
-			timer.period[0] = 200 # init timer
+		if (find_SENDER_BBRS == 1) then # programm entry to listen for BBRS sender
+			# we store incoming prox.comm.rx 
+			#check of SENDER_ID ===0 at the moment , it true store the incoming prox.comm.rx value as the new SENDER_ID value
+			if (SENDER_ID < 1) then
+				callsub GET_SENDER_ID
+			end
+			
+			#after saving the new value for SENDER_ID
+			#now we send the ACK FOR THE SENDER_ID
+			if (ACK_SENDER_ID_RCV == 1) then # if sender_id recvd
+				call leds.top(32,10,0)
+				ACK_SENDER_ID  = (SENDER_ID + 100) # compute the ACK for SENDER_ID
+				prox.comm.tx = ACK_SENDER_ID # send the ACK for the SENDER_ID
+				ACK_SENDER_ID_SENT = 1
+			end
+			
+			#Now we can recieved the DESTINATION_ID
+			if (ACK_SENDER_ID_SENT == 1 and DESTINATION_ID == 0) then
+				callsub GET_DESTINATION_ID
+			end
+			
+			#after saving the value of the destination_id
+			#now compute the ACK_DESTINATION_ID
+			if (ACK_DESTINATION_ID_RCV ==1) then
+				call leds.top(32,20,0)
+				#compute the ack for destination_id
+				ACK_DESTINATION_ID = (DESTINATION_ID + 101)
+				prox.comm.tx = ACK_DESTINATION_ID
+				ACK_DESTINATION_ID_SENT = 1
+			end
+			
+			#after saving the new value for the DESTINATION_ID received
+			#we can now recieve the main message
+			if (ACK_DESTINATION_ID_SENT == 1 and MESSAGE == 0) then
+				callsub GET_MESSAGE 
+			end
+			
+			#after saving the new value for the message 
+			#we can now send the ack for the MESSAGE content Received
+			if (ACK_MESSAGE_ID_RCV ==1) then
+				call leds.top(32,32,0)
+				ACK_MESSAGE = (MESSAGE + 1)
+				prox.comm.tx = ACK_MESSAGE
+				ACK_MESSAGE_ID_SENT  = 1 
+			end
 		end
-	end
-	
-	if (BBRS_found_Successful == 1) then
-			find_SENDER_BBRS = 0
-	end
-#______________________________________NETWORK CHAIN FORMATION________________
-
-	if (INIT_CHAIN_FORMATION == 1) then # start chain formation
-			if (MY_POSITION == 0 and I_ALREADY_FOUND_BBRS == 1 ) then # with I_ALREADY_FOUND_BBRS robot knows it found the thymioFirst
-				# if above condition TRUE
-					MY_POSITION  = 1 # make robot position 1 or first to find DELIVERY SERVICE to find the BBRS
-					# stop movement
-					SEARCH_MODE = 0
-					motor.left.target = 0
-					motor.right.target = 0
-					# broadcast own POSITION nearby DS
-					prox.comm.tx = MY_POSITION 
-					#verify incoming message to ensure the next or DS to be to control has position = own position + 1
-					if (prox.comm.rx == MY_POSITION + 1 ) then # since rx is incremented by 1 DS knows its the next robot
-						call sound.system(5) # make some noise
-						NEXT_POSITION = MY_POSITION + 1 # SAVE THE VALUE OF THE NEXT ROBOT TO BE IN FRONT
-						prox.comm.tx = NEXT_POSITION # acknowledge that broadcast so that the next robot knows
-					end
-					#help robot align to your current position
-						#if robot is in front
-					
-			end
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~	
-#------------------------------------ CODE CONTROLS OTHER DELIVERY SERVICE IF BBRS NOT FOUND FIRST--------------------------------------------------------------------		
-#}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}			
-			#~~~~ DELIVERY SERVICE DID NOT FIND THE BBRS FIRST ~ THEN THE CONDTION BELOW FOLLOWS~~~~
-			if (MY_POSITION == 0 and I_ALREADY_FOUND_BBRS == 0) then # at this point i expect the DS TO BE IN MOTION
-				#ask or search who found the BBRS
-					#if condition is true  ROBOT SHOULD SEARCH FOR DS WHO FOUND THE BBRS
-						#this part concentrates more on the message passing to find the who sends message
-						#CHECK FOR INCOMING MESSAGE
-						if (prox.comm.rx > MY_POSITION ) then
-							#stop movement
-							SEARCH_MODE = 0 # movement stopped!!!!!!!!
-							#set new position 
-							MY_POSITION = prox.comm.rx  + 1 # must only get value from robot not moving and already aligned to previous
-							# at this point the robot is already locked on the previous robot
-							# now reply back with newly asigned position
-							prox.comm.tx = MY_POSITION 
-							if (prox.comm.rx == MY_POSITION) then
-								call sound.system(5) # make some noise
-									# now we align the robot right in front of the previous robot to make a linear or chain formation
-									# robot has to come really close to form alignment
-										#we have to rely on the obstacle the current DS finds to send alignment message within a second
-										
-							end
-						end
-						
-				
-				
-			end
 		
-	end	
-	
-	
-	
-	# search mode ~~~~~~~~~~~ 
-if (INIT_CHAIN_FORMATION ==1 and I_ALREADY_FOUND_BBRS == 0 and SEARCH_MODE == 1) then
-	if (prox.horizontal[0] > 1400 or prox.horizontal[1] > 1400 or prox.horizontal[2] > 1400) then
-		motor.left.target = 0
-		motor.right.target = -500 # turn right
+	#now give a visual confirmation that all condition satisfied
+	if (ACK_SENDER_ID_SENT == 1 and ACK_DESTINATION_ID_SENT == 1 and ACK_MESSAGE_ID_SENT == 1 and MESSAGE !=  DESTINATION_ID and ACK_MESSAGE != DESTINATION_ID) then
+		call leds.top(0,32,0)
 	end
-	if (prox.horizontal[3] > 1400 and prox.horizontal[4] > 1400) then
-		motor.right.target = 0
-		motor.left.target = -500 #turn left
+	
+sub GET_SENDER_ID # listen for incoming SENDER_ID
+		SENDER_ID = prox.comm.rx
+		ACK_SENDER_ID_RCV = 1
+sub GET_DESTINATION_ID #listen for incoming DESTINATION_ID
+	if (prox.comm.rx !=SENDER_ID) then
+		DESTINATION_ID = prox.comm.rx
+		ACK_DESTINATION_ID_RCV = 1
 	end
-end
-
+sub GET_MESSAGE # listen for incoming message	
+	if (prox.comm.rx != DESTINATION_ID) then
+		MESSAGE = prox.comm.rx 
+		ACK_MESSAGE_ID_RCV = 1
+	end
+	
