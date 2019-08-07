@@ -119,7 +119,9 @@ onevent prox.comm
 	# now that we have recieved all ACK for sender_id , destination_id and message sent to DS from BBRS
 	if(ACK_SENDER_ID_RCV == 1 and ACK_DESTINATION_ID_RCV  ==1 and ACK_MESSAGE_ID_RCV ==1) then
 		call leds.top(0,32,0) # turn green
+		##prox.comm.tx =-1
 		init_BBRS_as_Sender = 0
+		prox.comm.tx = -1
 	end			
 
 	
