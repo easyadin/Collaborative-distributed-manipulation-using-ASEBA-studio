@@ -10,7 +10,7 @@ var init_RESET = 0
 var init_BBRS_as_Sender = 0
 var init_BBRS_as_Reciever = 0
 #-------------default variables--
-var BBRS_ID = 54
+var BBRS_ID = 55
 var SENDER_ID = BBRS_ID
 var DESTINATION_ID = 55 # THIS VARIABLE IS ASSOCIATED TO A KNOWN BBRS WITH ID 55
 var MESSAGE = 20 # message to sent using ASCI CODE [ ~ hi ~ ] without the zero
@@ -33,6 +33,7 @@ var FROM_WHAT_BBRS_ID = 0
 var MESSAGE_FROM_SENDER = 0
 
 var DS_FOUND = 0
+var NEUTRAL_ACKS_SENT = 0 # THIS ACK IS SENT BY RECEIVER
 call prox.comm.enable(0)
 #____________________________________________________________________________________________________TIMER 0
 onevent timer0
@@ -147,12 +148,14 @@ if (init_BBRS_as_Reciever == 1) then
 			MESSAGE_FROM_SENDER = prox.comm.rx  # save the message |||||||>
 			#send ack to DS_SENDER
 			prox.comm.tx = MESSAGE_FROM_SENDER + 1
-			call leds.top(0,32,0)
-			call sound.system(5)
+			NEUTRAL_ACKS_SENT = 1
 		end
 	end
 end
-
+if (NEUTRAL_ACKS_SENT == 1) then
+	call leds.top(0,32,0)
+	call sound.system(5)
+end
 
 
 
