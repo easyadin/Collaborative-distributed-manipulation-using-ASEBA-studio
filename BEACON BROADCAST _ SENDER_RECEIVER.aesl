@@ -28,6 +28,11 @@ var countSetTimer0 = 0
 var timerWait = 0
 var initTimer2ForSound = 0
 
+#Delivery Details is stored here
+var FROM_WHAT_BBRS_ID = 0
+var MESSAGE_FROM_SENDER = 0
+
+var DS_FOUND = 0
 call prox.comm.enable(0)
 #____________________________________________________________________________________________________TIMER 0
 onevent timer0
@@ -76,7 +81,7 @@ onevent rc5
 	if (rc5.command == 2 ) then #------------INITIALISE THE BBRS TO BE THE RECEIVER
 		init_BBRS_as_Reciever =1 #--------enable BBRS AS RECEIVER
 		init_BBRS_as_Sender = 0 # -------------BBRS SENDER ABILITY DISABLED
-		call leds.top(32,32,32)
+		call leds.top(20,32,20)
 		call prox.comm.enable(1) #---------------------ONLY REQUIRED TO RECEIVE AND NOT SEND MESSAGE
 		# reset default
 		call sound.system(-1)
@@ -90,12 +95,12 @@ if (rc5.command == 16) then
 	init_BBRS_as_Reciever = 0
 	ACK_SENDER_ID = 0
 	ACK_DESTINATION_ID = 0
-	prox.comm.tx = 405 # notify DS of reset activated 405 reset code
 	call leds.top(32,32,32)
 end
 #_+______________________________________________________________________________________________PROX EVENT TO SEND AND RECIEVE MESSAGE
 
 onevent prox.comm
+#CODE FOR BBRS HAS SENDER STARTS HERE
 	if (init_BBRS_as_Sender == 1) then #------------------------------------------------------------------------------- BEHAVIOUR HAS A BROADCAST SENDER
 		#-------------------------broadcast own BBRS_id
 		# when 1 is pressed on the remote prox.comm.tx is set to broadcast the robots iD i.s SENDER_ID
@@ -125,7 +130,33 @@ onevent prox.comm
 		prox.comm.tx = -1
 	end			
 
-	
+# CODE FOR BBRS AS SENDER ENDS END HERE |---->	
+
+# CODE FOR BBRS RECEIVER STARTS HERE
+#listen for broadcast
+#assign default broadcast value is 445 
+if (init_BBRS_as_Reciever == 1) then
+	if (prox.comm.rx == 445) then
+		DS_FOUND = 1
+		end
+	if (DS_FOUND == 1) then
+		#send your BBRS_ID example 55 for this test
+		prox.comm.tx = BBRS_ID
+		#GET THE MESSAGE FROM DS
+		if (prox.comm.rx != BBRS_ID and prox.comm.rx  != 446 and prox.comm.rx !=445) then
+			MESSAGE_FROM_SENDER = prox.comm.rx  # save the message |||||||>
+			#send ack to DS_SENDER
+			prox.comm.tx = MESSAGE_FROM_SENDER + 1
+			call leds.top(0,32,0)
+			call sound.system(5)
+		end
+	end
+end
+
+
+
+
+#SUBROUTINES FOR SENDING REQUIRED VALUE TO DS 
 sub GET_ACK_SENDER_ID
 #this happens only if the ACK_SENDER_ID = 0 and prox.comm.tx = SENDER_ID at the moment
 	if (ACK_SENDER_ID < 1 and prox.comm.tx == SENDER_ID) then
