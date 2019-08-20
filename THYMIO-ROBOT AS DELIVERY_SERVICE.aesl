@@ -94,9 +94,8 @@ onevent prox.comm
 			if (prox.comm.rx == REQUEST_GLOBAL_CONNECTION_CODE and BBRS_found_Successful == 0 and REQUIRED_DETAILS_RECEIVED == 0) then #445 global request
 	#if there is global request for network chain formation and i have not found a BBRS
 				#just ensuring the condition above is satisfied
-					if (BBRS_found_Successful == 0 and REQUIRED_DETAILS_RECEIVED == 0) then
 						#accept the request
-						prox.comm.tx = ACCEPT_REQUEST #SEND ACCEPT REQUEST CODE TO DS BROADCASTING GLOBAL CONNECTION
+						prox.comm.tx = ACCEPT_REQUEST_CODE #SEND ACCEPT REQUEST CODE TO DS BROADCASTING GLOBAL CONNECTION
 						ACCEPT_REQUEST_SENT = 1
 						call leds.top(0,0,10) #turn light blue
 						#after accepting request the DS willing to share information will begin to pass the information
@@ -142,9 +141,7 @@ onevent prox.comm
 							prox.comm.tx =-1 #send nothing
 							find_SENDER_BBRS = 0
 						end
-						#_____________________________RECEIVING FROM DS WITH BBRS DATA ENDS HERE________________________
-					end
-				
+						#_____________________________RECEIVING FROM DS WITH BBRS DATA ENDS HERE_______________________				
 			end
 			#-------------------------------------------------------------------------------------------------------------------------------------------------
 			# this code section below is triggered only if the DS finds a BBRS
