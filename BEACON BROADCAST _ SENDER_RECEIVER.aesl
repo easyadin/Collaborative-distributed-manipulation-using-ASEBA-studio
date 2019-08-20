@@ -1,10 +1,11 @@
-#-------------------------THYMIO - BEACON - BROADCAST - RECEIVER OR SENDER------- ACRONYM (BBRS)
-#-------------------- THERE ARE TWO MOST IMPORTANT BEHAVIOUR TO EXPECT FROM THE BBRS---------
+#------------------------- THYMIO - BEACON - BROADCAST - RECEIVER OR SENDER ------- ACRONYM (BBRS)
+#-------------------- THERE ARE TWO MOST IMPORTANT BEHAVIOUR TO EXPECT FROM THE BBRS ---------
 #----------------- 1. THYMIO HAS BROADCAST SENDER
 #---------------------- FOR BBRS TO SEND MESSAGE FROM A KNOW BBRS_ID IT MUST PASSED THE MESSAGE TO A	TO DELIVERY SERVICE ROBOT
 
 #------------------ 2. THYMIO HAS BROADCAST RECEIVER
 #----------------------------- FOR BBRS TO RECEIVE TO MESSAGE ITS ID MUST MATCH THE CORRESPONDING DESTINATION_ID BROADCASTED BY THE SERVICE DELIVERY
+
 var init_RESET = 0
 var init_BBRS_as_Sender = 0
 var init_BBRS_as_Reciever = 0
@@ -28,7 +29,7 @@ var timerWait = 0
 var initTimer2ForSound = 0
 
 call prox.comm.enable(0)
-#_________________________________________________________________________________________________________TIMER 0
+#____________________________________________________________________________________________________TIMER 0
 onevent timer0
 		if (init_BBRS_as_Sender ==1) then
 			#call sound.system(5)
@@ -43,7 +44,7 @@ onevent timer0
 			end
 		end
 	
-#___________________________________________________________________________________________________________TIMER 1
+#___________________________________________________________________________________________________TIMER 1
 onevent timer1
 		if (init_BBRS_as_Sender == 1) then
 			
@@ -98,7 +99,7 @@ onevent prox.comm
 	if (init_BBRS_as_Sender == 1) then #------------------------------------------------------------------------------- BEHAVIOUR HAS A BROADCAST SENDER
 		#-------------------------broadcast own BBRS_id
 		# when 1 is pressed on the remote prox.comm.tx is set to broadcast the robots iD i.s SENDER_ID
-			if (ACK_SENDER_ID < 1 and prox.comm.tx == SENDER_ID) then 
+			if (ACK_SENDER_ID < 1 and prox.comm.tx == SENDER_ID) then
 				callsub GET_ACK_SENDER_ID # an ack expected from DS
 			end
 		
@@ -117,7 +118,7 @@ onevent prox.comm
 	end	
 				
 	# now that we have recieved all ACK for sender_id , destination_id and message sent to DS from BBRS
-	if(ACK_SENDER_ID_RCV == 1 and ACK_DESTINATION_ID_RCV  ==1 and ACK_MESSAGE_ID_RCV ==1) then
+	if(ACK_SENDER_ID_RCV == 1 and ACK_DESTINATION_ID_RCV ==1 and ACK_MESSAGE_ID_RCV ==1) then
 		call leds.top(0,32,0) # turn green
 		##prox.comm.tx =-1
 		init_BBRS_as_Sender = 0
@@ -127,10 +128,10 @@ onevent prox.comm
 	
 sub GET_ACK_SENDER_ID
 #this happens only if the ACK_SENDER_ID = 0 and prox.comm.tx = SENDER_ID at the moment
-	if (ACK_SENDER_ID < 1 and prox.comm.tx == SENDER_ID) then 
-		#now get the value of prox.comm.rx if its passed the simple computation 
+	if (ACK_SENDER_ID < 1 and prox.comm.tx == SENDER_ID) then
+		#now get the value of prox.comm.rx if its passed the simple computation
 		#i.e we verify what the ACK_SENDER_ID sent from the DS
-		if (prox.comm.rx == (SENDER_ID + 100)) then
+		if (prox.comm.rx == (SENDER_ID + 1000)) then
 			ACK_SENDER_ID =prox.comm.rx #save the ACK recieved
 			ACK_SENDER_ID_RCV = 1
 		end
@@ -141,7 +142,7 @@ sub GET_ACK_DESTINATION
 	if (ACK_DESTINATION_ID <1 and ACK_SENDER_ID_RCV == 1) then
 		#just to be sure we get the right value we assert the condition again
 		#now we verify the value of the prox.comm.rx
-		if (prox.comm.rx !=ACK_SENDER_ID and prox.comm.rx == (101+DESTINATION_ID)) then # we require value not the ack recvd for SENDER_ID and if meet the ack computation
+		if (prox.comm.rx !=ACK_SENDER_ID and prox.comm.rx == (1001+DESTINATION_ID)) then # we require value not the ack recvd for SENDER_ID and if meet the ack computation
 			ACK_DESTINATION_ID = prox.comm.rx # save the ACK recieved
 			ACK_DESTINATION_ID_RCV = 1
 		end
@@ -149,10 +150,12 @@ sub GET_ACK_DESTINATION
 	
 sub GET_ACK_MESSAGE
 	#this only if we have recieved both ack for sender_id and destination sent
-	if (ACK_MESSAGE <1  and ACK_DESTINATION_ID_RCV ==1) then
+	if (ACK_MESSAGE <1 and ACK_DESTINATION_ID_RCV ==1) then
 		#now we verify the value of prox.comm.enable
 		if (prox.comm.rx != ACK_DESTINATION_ID and prox.comm.rx == (MESSAGE + 1)) then
 			ACK_MESSAGE = prox.comm.rx
 			ACK_MESSAGE_ID_RCV = 1
 		end
 	end
+
+
