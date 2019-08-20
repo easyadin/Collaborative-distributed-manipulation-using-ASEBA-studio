@@ -75,7 +75,7 @@ onevent timer0
 		#when a robot finds BBRS and has acquired the re	quired data it can either share this data with fellow DS or send a message to the destination if close enough
 		
 		COUNT_DOWN_BEFORE_REQUEST_GLOBAL_CONNECTION++
-	if (COUNT_DOWN_BEFORE_REQUEST_GLOBAL_CONNECTION > 5) then
+	if (COUNT_DOWN_BEFORE_REQUEST_GLOBAL_CONNECTION > 10) then
 			call prox.comm.enable(1)
 			REQUEST_GLOBAL_CONNECTION = REQUEST_GLOBAL_CONNECTION_CODE
 			prox.comm.tx = REQUEST_GLOBAL_CONNECTION
@@ -280,15 +280,21 @@ sub GET_MESSAGE # listen for incoming message
 sub RECIEVE_SENDER_ID_FROM_DS
 	if (SENDER_ID_FROM_DS < 1 and prox.comm.rx != ACCEPT_REQUEST and prox.comm.rx !=445) then
 			SENDER_ID_FROM_DS = prox.comm.rx # save the SENDER_ID RECEIVED FROM DS
+			SENDER_ID = SENDER_ID_FROM_DS
+			SENDER_ID_TO_DS = SENDER_ID
 	end
 sub RECIEVE_DESTINATION_ID_FROM_DS
 	if (prox.comm.rx != SENDER_ID_FROM_DS and prox.comm.rx != ACK_SENDER_ID_SENT_TO_DS) then
 		#destination value must be unique from the sender_id received or ack sent
-		DESTINATION_ID_FROM_DS	= prox.comm.rx # save destination received				
+		DESTINATION_ID_FROM_DS	= prox.comm.rx # save destination received	
+		DESTINATION_ID = DESTINATION_ID_FROM_DS	
+		DESTINATION_ID_TO_DS = DESTINATION_ID
 	end
 sub RECIEVE_MESSAGE_ID_FROM_DS
 	if (prox.comm.rx!=DESTINATION_ID_FROM_DS and prox.comm.rx!=ACK_DESTINATION_ID_SENT_TO_DS) then
 		MESSAGE_FROM_DS = prox.comm.rx
+		MESSAGE = MESSAGE_FROM_DS
+		MESSAGE_TO_DS = MESSAGE
 	end
 										
 
