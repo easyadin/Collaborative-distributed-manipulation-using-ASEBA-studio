@@ -10,7 +10,7 @@ var init_RESET = 0
 var init_BBRS_as_Sender = 0
 var init_BBRS_as_Reciever = 0
 #-------------default variables--
-var BBRS_ID = 55
+var BBRS_ID = 54
 var SENDER_ID = BBRS_ID
 var DESTINATION_ID = 55 # THIS VARIABLE IS ASSOCIATED TO A KNOWN BBRS WITH ID 55
 var MESSAGE = 20 # message to sent using ASCI CODE [ ~ hi ~ ] without the zero
@@ -191,5 +191,3 @@ sub GET_ACK_MESSAGE
 			ACK_MESSAGE_ID_RCV = 1
 		end
 	end
-
-
