@@ -1,321 +1,202 @@
- #___________________________THYMIO ROBOT AS DELIVERY SERVICE__________________________
-#__________________ FOR SUCCESSFUL DELIVERY TO DESTINATION the following is required by the DS (DELIVERY SERVICE)
-#__________________ REQUIRED INFORMATION FROM BBRS_____[ SENDER_ID, DESTINATION_ID ] _________________________
-#__________________ DELIVERY SERVICE MUST SEND ___[ACK_SENDER_ID, ACK_DESTINATION_ID] ______________________
+#------------------------- THYMIO - BEACON - BROADCAST - RECEIVER OR SENDER ------- ACRONYM (BBRS)
+#-------------------- THERE ARE TWO MOST IMPORTANT BEHAVIOUR TO EXPECT FROM THE BBRS ---------
+#----------------- 1. THYMIO HAS BROADCAST SENDER
+#---------------------- FOR BBRS TO SEND MESSAGE FROM A KNOW BBRS_ID IT MUST PASSED THE MESSAGE TO A	TO DELIVERY SERVICE ROBOT
 
-var find_SENDER_BBRS = 1 # determines if robot starts it program or not
-var BBRS_found_Successful = 0 # this variable tells when BBRS is found and all required data has been received and passed
-var SENDER_ID = 0 # TO BE RECEIVED FROM BBRS
-var DESTINATION_ID = 0 # TO BE RECEIVED FROM BBRS
-var MESSAGE = 0
-var MESSAGE_DELIVERED_TO_DESTINATION_SUCCESFULLY = 0
-var REQUIRED_DETAILS_RECEIVED = 0
+#------------------ 2. THYMIO HAS BROADCAST RECEIVER
+#----------------------------- FOR BBRS TO RECEIVE TO MESSAGE ITS ID MUST MATCH THE CORRESPONDING DESTINATION_ID BROADCASTED BY THE SERVICE DELIVERY
 
-var ACK_SENDER_ID = 0 # TO BE SENT TO BBSR
-var ACK_DESTINATION_ID =0# TO BE SENT BBSR
+	#------------------ RESET SUBROUTINES -------------------------
+	# A reset is necessary when robots get wrong value 
+	#  i have defined a threshold to improve performance of message passed
+	# 1. ID TO BE ASSIGNED MUST BE DIVISIBLE BY PRIME NUMBERS 3 AND 5 eg 15, 45
+	# 2. THE ACKS TO BE SENT MUST BE THE SENDER_ID + 1000 AND DESTINATION_ID + 1001 AND MESSAGE + 1
+	# THRESHOLD FOR SENDER_ID ACK and DESTINATION_ID ACK IS BETWEEN (1000 - 1056)
+	# THRESHOLD FOR MESSAGE IS (MESSAGE + 1)
+	# THIS IS CALLED WHE WRONG VALUES ARE PASSED TO RESET ALL VARIABLES TO DEFAULTSvar init_RESET = 0
+	
+var init_BBRS_as_Sender = 0
+var init_BBRS_as_Reciever = 0
+#-------------default variables--
+var BBRS_ID = 30
+var SENDER_ID = BBRS_ID
+var DESTINATION_ID = 30 # THIS VARIABLE IS ASSOCIATED TO A KNOWN BBRS WITH ID 55
+var MESSAGE = 20 # message to sent using ASCI CODE [ ~ hi ~ ] without the zero
+
+#----------required ACKS FROM SERVICE DELIVERY to ensure message has being passed
+var ACK_SENDER_ID = 0 # THIS IS RECEIVED FROM SERVICE DELIVERY
+var ACK_DESTINATION_ID = 0 # THIS IS RECEIVED FROM SERVICE DELIVERY
 var ACK_MESSAGE = 0
-
-#------------------------------------------- 3 ACKS REQUIRED TO VERIFY THE VALUE PASSED BETWEEN BBRS AND DS AND TRACK IF SENT TO BBRS
+#------------------------------------------- 3 ACKS REQUIRED TO VERIFY THE VALUE PASSED BETWEEN BBRS AND DS
 var ACK_SENDER_ID_RCV = 0
 var ACK_DESTINATION_ID_RCV = 0
 var ACK_MESSAGE_ID_RCV = 0
-	
-# THIS VARIABLE WILL HELP ENSURE THE ACKS COMPUTED ABOVE HAVE BEING CORRECTLY SENT
-var ACK_SENDER_ID_SENT = 0
-var ACK_DESTINATION_ID_SENT = 0
-var ACK_MESSAGE_ID_SENT = 0
+#__________________________________________________________________________________________VARIABLE COUNTER FOR TIMERS
+var countSetTimer0 = 0
+var timerWait = 0
+var initTimer2ForSound = 0
 
-var REQUEST_GLOBAL_CONNECTION = 0 #expected : 445
-var REQUEST_GLOBAL_CONNECTION_CODE = 445
-var ACCEPT_REQUEST = 0 #expected 446
-var ACCEPT_REQUEST_CODE = 446
-var ACCEPT_REQUEST_SENT = 0
-# required countdown before broadcasting REQUEST_GLOBAL_CONNECTION
-var COUNT_DOWN_BEFORE_REQUEST_GLOBAL_CONNECTION = 0
+#Delivery Details is stored here
+var FROM_WHAT_BBRS_ID = 0
+var MESSAGE_FROM_SENDER = 0
 
-#THIS VARIABLES CONTROLS RECEIVING STORED MESSAGE FROM ANY DS WITH INFORMATION ABOUT THE SENDER AND DESTINATION
-#--------------------------------------------------------------------------------------
-#					DS RECEIVING DATA FROM DS WITH BBRS DATA
-#__________________________________________________________
-var SENDER_ID_FROM_DS = 0
-var DESTINATION_ID_FROM_DS = 0
-var MESSAGE_FROM_DS = 0
-# ACKS FROM DS RECEIVING DATA FROM OTHER DS WITH BBRS DATA#
-var ACK_SENDER_ID_SENT_TO_DS = 0
-var ACK_DESTINATION_ID_SENT_TO_DS = 0
-var ACK_MESSAGE_SENT_TO_DS = 0
-
-var ACK_SENDER_ID_SENT_TO_DS_SENT = 0
-var ACK_DESTINATION_ID_SENT_TO_DS_SENT = 0
-var ACK_MESSAGE_SENT_TO_DS_SENT = 0
-
-
-#_________________________________________________________________
-#			DS SENDING DATA TO DS THAT ACCEPTED TO JOIN ITS NODE
-#--------------------------------------------------------------------------------------------------
-var SENDER_ID_TO_DS = SENDER_ID
-var DESTINATION_ID_TO_DS = DESTINATION_ID
-var MESSAGE_TO_DS = MESSAGE
-# ACKS RECEIVED FROM DS CONNECTED TO THE DS WITH ALL INFORMATION ON BBRS #
-var ACK_SENDER_ID_RECIEVED_FROM_DS = 0
-var ACK_DESTINATION_ID_RECIEVED_FROM_DS = 0
-var ACK_MESSAGE_RECIEVED_FROM_DS = 0
-
-var ACK_SENDER_ID_RECIEVED_FROM_DS_RCVD = 0
-var ACK_DESTINATION_ID_RECIEVED_FROM_DS_RCVD = 0
-var ACK_MESSAGE_RECIEVED_FROM_DS_RCVD = 0
-
-var ReceivingFromDataDS = 0
-var countNumberofRemotePressed = 0
-#________________________________________________________________________SET DEFAULT BEHAVIOUR
-call prox.comm.enable(1)
-call leds.top(32,32,32)
-
-# ________________________________________________________________________________TIMER 0
+var DS_FOUND = 0
+var NEUTRAL_ACKS_SENT = 0 # THIS ACK IS SENT BY RECEIVER
+call prox.comm.enable(0)
+#____________________________________________________________________________________________________TIMER 0
 onevent timer0
-		#when a robot finds BBRS and has acquired the re	quired data it can either share this data with fellow DS or send a message to the destination if close enough
+		if (init_BBRS_as_Sender ==1) then
+			#call sound.system(5)
+			countSetTimer0++
+			call leds.top(32,0,0) 	
 		
-		COUNT_DOWN_BEFORE_REQUEST_GLOBAL_CONNECTION++
-	if (COUNT_DOWN_BEFORE_REQUEST_GLOBAL_CONNECTION > 10) then
-			call prox.comm.enable(1)
-			REQUEST_GLOBAL_CONNECTION = REQUEST_GLOBAL_CONNECTION_CODE
-			prox.comm.tx = REQUEST_GLOBAL_CONNECTION
-			call leds.top(0,0,32)
-			timer.period[0] = 0
-			COUNT_DOWN_BEFORE_REQUEST_GLOBAL_CONNECTION = 0
-	end
-
-#_________________________________________________________________________ COMMUNICATION EVENT
-onevent prox.comm
-
-		if (find_SENDER_BBRS == 1) then # programm entry to listen for BBRS sender
-			#ACCEPT INCOMING REQUEST
-			#check if there is global request to form chain network
-			#NOTE: only a DS with complete information about Sender_id and destination_id
-			if (prox.comm.rx == REQUEST_GLOBAL_CONNECTION_CODE and BBRS_found_Successful == 0 and REQUIRED_DETAILS_RECEIVED == 0) then #445 global request
-	#if there is global request for network chain formation and i have not found a BBRS
-				#just ensuring the condition above is satisfied
-						#accept the request
-						prox.comm.tx = ACCEPT_REQUEST_CODE #SEND ACCEPT REQUEST CODE TO DS BROADCASTING GLOBAL CONNECTION
-						ACCEPT_REQUEST_SENT = 1
-						call leds.top(0,0,10) #turn light blue
-						#after accepting request the DS willing to share information will begin to pass the information
-						#_________________________________________________________________________
-						#							MESSAGE BLOCK WILL BE PASSED TO OTHER DS
-						#--------------------------------------------------------------------------------------------------------------
-														 #ACCEPT INCOMING SENDER_ID
-						if (SENDER_ID_FROM_DS < 1 and ACCEPT_REQUEST_SENT == 1 and prox.comm.rx !=ACCEPT_REQUEST and prox.comm.rx !=445) then
-								callsub RECIEVE_SENDER_ID_FROM_DS # subroutine call to accept sender_id
-								#after saving the sender_id we need to send an ack to confirming it is received
-								ACK_SENDER_ID_SENT_TO_DS = (SENDER_ID_FROM_DS + 1000) # compute the ack
-								prox.comm.tx = ACK_SENDER_ID_SENT_TO_DS # send ack for sender_id recieved
-								ACK_SENDER_ID_SENT_TO_DS_SENT = 1 # confirm that is computed and sent
-								call leds.top(32,10,0)
-						end
-						# get destination_id from DS sending BBRS data
-						if (ACK_SENDER_ID_SENT_TO_DS_SENT == 1 and DESTINATION_ID_FROM_DS <1 ) then
-							#statement is only true if DESTINATION_ID_FROM_DS is not yet assigned a value other than 0
-							if (prox.comm.rx != SENDER_ID_FROM_DS and prox.comm.rx != ACK_SENDER_ID_SENT_TO_DS) then
-								#destination value must be unique from the sender_id received or ack sent
-								callsub RECIEVE_DESTINATION_ID_FROM_DS #call subroutine to receive destination
-								#after receiving destination value
-								ACK_DESTINATION_ID_RECIEVED_FROM_DS = (1001 + DESTINATION_ID_FROM_DS) # compute ack for destination_id recieved
-								prox.comm.tx = ACK_DESTINATION_ID_RECIEVED_FROM_DS # send ack for destination_id
-								ACK_DESTINATION_ID_SENT_TO_DS_SENT = 1
-								call leds.top(32,20,0)
-							end
-						end
-						#get message content from DS with BBRS data
-						if (ACK_DESTINATION_ID_SENT_TO_DS_SENT == 1 and MESSAGE_FROM_DS <1) then
-							#if destination value received we can now get the message
-							callsub RECIEVE_MESSAGE_ID_FROM_DS # call subroutine to save message received
-							ACK_MESSAGE_SENT_TO_DS = (1 + MESSAGE_FROM_DS) # compute ack for message received
-							prox.comm.tx = ACK_MESSAGE_SENT_TO_DS #send ack for message received
-							ACK_MESSAGE_SENT_TO_DS_SENT = 1
-							call leds.top(32,32,0)
-						end
-						
-						#VISUAL CONFIRMATION DS HAS RECEIVE COMPLETE DATA FROM OTHER DS
-						if (ACK_MESSAGE_SENT_TO_DS_SENT == 1 and ACK_DESTINATION_ID_SENT_TO_DS_SENT == 1 and ACK_SENDER_ID_SENT_TO_DS_SENT == 1 ) then
-							call leds.top(0,32,0)
-							call sound.system(2)
-							prox.comm.tx =-1 #send nothing
-							find_SENDER_BBRS = 0
-						end
-						#_____________________________RECEIVING FROM DS WITH BBRS DATA ENDS HERE_______________________				
+			if (countSetTimer0 > 0) then
+				call leds.top(0,0,0) 	
+				timer.period[0] = 0 # timer sleep
+				initTimer2ForSound =1 # variable required so that timer 1 is reusable
+				timer.period[1] = 500 # init timer 1
 			end
-			#-------------------------------------------------------------------------------------------------------------------------------------------------
-			# this code section below is triggered only if the DS finds a BBRS
-			# we store incoming prox.comm.rx
-			#check for SENDER_ID === 0 at the moment , it true store the incoming prox.comm.rx value as the new SENDER_ID value
-			if (SENDER_ID < 1 and prox.comm.rx != REQUEST_GLOBAL_CONNECTION_CODE and REQUIRED_DETAILS_RECEIVED !=REQUEST_GLOBAL_CONNECTION_CODE) then
-				callsub GET_SENDER_ID
-			end
-			#after saving the new value for SENDER_ID
-			#now we send the ACK FOR THE SENDER_ID
-			if (ACK_SENDER_ID_RCV == 1) then # if sender_id recvd
-				call leds.top(32,10,0)
-				ACK_SENDER_ID = (SENDER_ID + 1000) # compute the ACK for SENDER_ID
-				prox.comm.tx = ACK_SENDER_ID # send the ACK for the SENDER_ID
-				ACK_SENDER_ID_SENT = 1
-			end
-			#Now we can receive the DESTINATION_ID
-			if (ACK_SENDER_ID_SENT == 1 and DESTINATION_ID == 0) then
-				callsub GET_DESTINATION_ID
-			end
-			#after saving the value of the destination_id
-			#now compute the ACK_DESTINATION_ID
-			if (ACK_DESTINATION_ID_RCV ==1 and prox.comm.rx !=0) then
-				call leds.top(32,20,0)
-			#compute the ack for destination_id
-				ACK_DESTINATION_ID = (DESTINATION_ID + 1001)
-				prox.comm.tx = ACK_DESTINATION_ID
-				ACK_DESTINATION_ID_SENT = 1
-			end
-			#after saving the new value for the DESTINATION_ID received
-			#we can now receive the main message
-			if (ACK_DESTINATION_ID_SENT == 1 and MESSAGE == 0) then
-				callsub GET_MESSAGE
-			end
-			#after saving the new value for the message
-			#we can now send the ack for the MESSAGE content Received
-			if (ACK_MESSAGE_ID_RCV == 1 and ACK_MESSAGE == 0) then
-				call leds.top(32,32,0)
-				ACK_MESSAGE = (MESSAGE + 1)
-				prox.comm.tx = ACK_MESSAGE
-				ACK_MESSAGE_ID_SENT = 1
-			end
-			#now give a visual confirmation that all conditions satisfied and all required details received from BBRS
-			if (ACK_SENDER_ID_SENT == 1 and ACK_DESTINATION_ID_SENT == 1 and ACK_MESSAGE_ID_SENT == 1 and MESSAGE != DESTINATION_ID and ACK_MESSAGE != DESTINATION_ID and REQUEST_GLOBAL_CONNECTION == 0 and find_SENDER_BBRS == 1) then
-				call leds.top(0,32,0)
-				BBRS_found_Successful = 1 ## BBRS found successful and all required details stored
-				find_SENDER_BBRS = 0 #
-				REQUIRED_DETAILS_RECEIVED = 1
-				timer.period[0] = 200
-			end
-	end
+		end
+	
+#___________________________________________________________________________________________________TIMER 1
+onevent timer1
+		if (init_BBRS_as_Sender == 1) then
 			
-		
-	#at this point after the above condition is met the DS broadcasts a global request for connection to either the Destination address or other DS
-	# other DS can accept this request by sending an accept code [ 446 ]
-	#likewise if BBRS with destination address is in range it also accept this request by sending its BBRS_ID
-	#if this Accept code received by this DS is the accept code 446 then this DS passes the information it has the other DS
-	#with this code we know this is another DS and not a BBRS
-	if (prox.comm.rx == ACCEPT_REQUEST_CODE) then
-		ACCEPT_REQUEST = prox.comm.rx 
+					if (initTimer2ForSound == 1) then
+						timerWait++
+							if (timerWait > 2) then
+									call leds.top(32,0,0) 	
+								#	call sound.system(5)
+									timer.period[0] = 200
+									timerWait = 0
+							end
+					end
+		end
+					
+#________________________________________________________________________________________________________REMOTE CONTROL
+#--------using remote control we can choose who will be SENDER with value = 1 AND RECEIVER WITH value = 2
+onevent rc5
+	if (rc5.command == 1) then #------------INITIALISE THE BBRS TO BE THE SENDER
+#[ FOR BBRS BEACON SOUND ]#
+		timer.period[0] = 200
+		call leds.top(32,32,32)
+		call sound.system(5)
+		init_BBRS_as_Sender = 1 # --set BBRS AS SENDER
+		init_BBRS_as_Reciever = 0#-----BBRS RECEIVE ABILITY DISABLED
+		call prox.comm.enable(1)#----------ENABLE COMMUNICATION
+		prox.comm.tx = SENDER_ID#---------------BROADCAST OWN BBRS_ID
+	end	
+	
+	if (rc5.command == 2 ) then #------------INITIALISE THE BBRS TO BE THE RECEIVER
+		init_BBRS_as_Reciever =1 #--------enable BBRS AS RECEIVER
+		init_BBRS_as_Sender = 0 # -------------BBRS SENDER ABILITY DISABLED
+		call leds.top(20,32,20)
+		call prox.comm.enable(1) #---------------------ONLY REQUIRED TO RECEIVE AND NOT SEND MESSAGE
+		# reset default
+		call sound.system(-1)
+		timer.period[0] = 0
+		timer.period[1] = 0
 	end
 	
-	if (REQUEST_GLOBAL_CONNECTION == REQUEST_GLOBAL_CONNECTION_CODE and ACCEPT_REQUEST == ACCEPT_REQUEST_CODE) then#
-				#Listen for incoming requests
-				#NOW SEND SENDER_ID TO DS
-				prox.comm.tx = SENDER_ID_TO_DS
-				#get ack for SENDER_ID_TO_DS sent
-				if (prox.comm.rx != SENDER_ID_TO_DS and prox.comm.rx == (SENDER_ID_TO_DS + 1000)) then
-					ACK_SENDER_ID_RECIEVED_FROM_DS = prox.comm.rx #save theack received from DS
-					ACK_SENDER_ID_RECIEVED_FROM_DS_RCVD =1
-					call leds.top(32,10,0)
-				end
-				#send destination_id to DS
-				if (ACK_SENDER_ID_RECIEVED_FROM_DS_RCVD == 1 and ACK_SENDER_ID_RECIEVED_FROM_DS == (SENDER_ID_TO_DS + 1000)) then
-					prox.comm.tx = DESTINATION_ID_TO_DS # SEND DESTINATION_ID
-					#GET ACK FOR DESTINATION SENT
-					if (prox.comm.rx == DESTINATION_ID_TO_DS+1001) then
-						ACK_DESTINATION_ID_RECIEVED_FROM_DS = prox.comm.rx
-						ACK_DESTINATION_ID_RECIEVED_FROM_DS_RCVD =1
-						call leds.top(32,20,0)
-					end
-				end
-				#send message content
-				if (ACK_DESTINATION_ID_RECIEVED_FROM_DS_RCVD == 1) then
-					prox.comm.tx = MESSAGE_TO_DS #SEND MESSAGE TO DS
-					#GET ACK FOR MESSAGE SENT
-					if (prox.comm.rx ==(MESSAGE_TO_DS + 1)) then
-						ACK_MESSAGE_RECIEVED_FROM_DS = prox.comm.rx #save ack
-						ACK_MESSAGE_RECIEVED_FROM_DS_RCVD =1
-						call leds.top(32,32,0)
-					end
-				end
-				#end sending to DS when sending complete
-				if(ACK_SENDER_ID_RECIEVED_FROM_DS_RCVD == 1 and ACK_DESTINATION_ID_RECIEVED_FROM_DS_RCVD == 1 and ACK_MESSAGE_RECIEVED_FROM_DS_RCVD == 1) then
-					prox.comm.tx = -1
-					call leds.top(0,32,0)
-				end	
-	end
-		
+#-------------------------------------RESET __________ALL VALUES SET TO ZERO AND NO SELECTION EITHER AS SENDER OR RECEIVER
+if (rc5.command == 16) then
+	init_BBRS_as_Sender = 0
+	init_BBRS_as_Reciever = 0
+	ACK_SENDER_ID = 0
+	ACK_DESTINATION_ID = 0
+	call leds.top(32,32,32)
+end
+#_+______________________________________________________________________________________________PROX EVENT TO SEND AND RECIEVE MESSAGE
 
-# THIS SECTION CONTROL SENDING TO BBRS WITH DESTINATION ID
-if (REQUEST_GLOBAL_CONNECTION == REQUEST_GLOBAL_CONNECTION_CODE and prox.comm.rx == DESTINATION_ID) then
-	prox.comm.tx = MESSAGE
-	#get confirmation that is recieved
-	if (prox.comm.rx ==( MESSAGE + 1)) then
-		MESSAGE_DELIVERED_TO_DESTINATION_SUCCESFULLY = 1
-	end
-	if (MESSAGE_DELIVERED_TO_DESTINATION_SUCCESFULLY== 1) then
-		call leds.top(0,32,0)
+onevent prox.comm
+#CODE FOR BBRS HAS SENDER STARTS HERE
+	if (init_BBRS_as_Sender == 1) then #------------------------------------------------------------------------------- BEHAVIOUR HAS A BROADCAST SENDER
+		#-------------------------broadcast own BBRS_id
+		# when 1 is pressed on the remote prox.comm.tx is set to broadcast the robots iD i.s SENDER_ID
+			if (ACK_SENDER_ID < 1 and prox.comm.tx == SENDER_ID) then
+				callsub GET_ACK_SENDER_ID # an ack expected from DS
+			end
+		
+			if (ACK_SENDER_ID_RCV == 1) then
+				call leds.top(32,10,0)
+				prox.comm.tx = DESTINATION_ID # SEND DESTINATION_ID SINCE WE NOW HAVE CONFIRMATION FOR SENDER_ID SENT
+				callsub GET_ACK_DESTINATION # call subroutine to get the ack for destination_id sent
+			end
+			#if conditions above are met i.e when we have sent required ids and recieved ack for sender_id and destination_id sent
+			#now we can send the main message to complete the 3 - way handshake
+			if (ACK_DESTINATION_ID_RCV == 1) then
+				call leds.top(32,20,0)
+				prox.comm.tx = MESSAGE # send the main message
+				callsub GET_ACK_MESSAGE # get the ack for message sent
+			end
+	end	
+				
+	# now that we have recieved all ACK for sender_id , destination_id and message sent to DS from BBRS
+	if(ACK_SENDER_ID_RCV == 1 and ACK_DESTINATION_ID_RCV ==1 and ACK_MESSAGE_ID_RCV ==1) then
+		call leds.top(0,32,0) # turn green
+		##prox.comm.tx =-1
+		init_BBRS_as_Sender = 0
+		prox.comm.tx = -1
+	end			
+# CODE FOR BBRS AS SENDER ENDS END HERE |---->	
+
+# CODE FOR BBRS RECEIVER STARTS HERE
+#listen for broadcast
+#assign default broadcast value is 445 
+if (init_BBRS_as_Reciever == 1) then
+	if (prox.comm.rx == 445) then
+		DS_FOUND = 1
+		end
+	if (DS_FOUND == 1) then
+		#send your BBRS_ID example 55 for this test
+		prox.comm.tx = BBRS_ID
+		#GET THE MESSAGE FROM DS
+		if (prox.comm.rx != BBRS_ID and prox.comm.rx  != 446 and prox.comm.rx !=445) then
+			MESSAGE_FROM_SENDER = prox.comm.rx  # save the message |||||||>
+			#send ack to DS_SENDER
+			prox.comm.tx = MESSAGE_FROM_SENDER + 1
+			NEUTRAL_ACKS_SENT = 1
+		end
 	end
 end
 
-			
-#_____________GETTERS FOR SENDER_ID / DESTINATION_ID / MESSAGE__________					
-sub GET_SENDER_ID # listen for incoming SENDER_ID
-		if (prox.comm.rx !=0) then
-			SENDER_ID = prox.comm.rx
-			SENDER_ID_TO_DS = SENDER_ID
+if (NEUTRAL_ACKS_SENT == 1) then
+	call leds.top(0,32,0)
+	call sound.system(5)
+	NEUTRAL_ACKS_SENT = 0
+end
+
+
+
+#SUBROUTINES FOR SENDING REQUIRED VALUE TO DS 
+sub GET_ACK_SENDER_ID
+#this happens only if the ACK_SENDER_ID = 0 and prox.comm.tx = SENDER_ID at the moment
+	if (ACK_SENDER_ID < 1 and prox.comm.tx == SENDER_ID) then
+		#now get the value of prox.comm.rx if its passed the simple computation
+		#i.e we verify what the ACK_SENDER_ID sent from the DS
+		if (prox.comm.rx == (SENDER_ID + 1000)) then
+			ACK_SENDER_ID =prox.comm.rx #save the ACK recieved
 			ACK_SENDER_ID_RCV = 1
 		end
+	end
 		
-		
-sub GET_DESTINATION_ID #listen for incoming DESTINATION_ID
-	if (prox.comm.rx !=SENDER_ID and prox.comm.rx !=0) then
-		DESTINATION_ID = prox.comm.rx
-		DESTINATION_ID_TO_DS = DESTINATION_ID
-		ACK_DESTINATION_ID_RCV = 1
+sub GET_ACK_DESTINATION
+	#this happens only if we have recvd confirmation that ack for the SENDER_ID sent
+	if (ACK_DESTINATION_ID <1 and ACK_SENDER_ID_RCV == 1) then
+		#just to be sure we get the right value we assert the condition again
+		#now we verify the value of the prox.comm.rx
+		if (prox.comm.rx !=ACK_SENDER_ID and prox.comm.rx == (1001+DESTINATION_ID)) then # we require value not the ack recvd for SENDER_ID and if meet the ack computation
+			ACK_DESTINATION_ID = prox.comm.rx # save the ACK recieved
+			ACK_DESTINATION_ID_RCV = 1
+		end
 	end
 	
-sub GET_MESSAGE # listen for incoming message	
-	if (prox.comm.rx != DESTINATION_ID and prox.comm.rx !=0) then
-		MESSAGE = prox.comm.rx
-		MESSAGE_TO_DS = MESSAGE
-		ACK_MESSAGE_ID_RCV = 1
+sub GET_ACK_MESSAGE
+	#this only if we have recieved both ack for sender_id and destination sent
+	if (ACK_MESSAGE <1 and ACK_DESTINATION_ID_RCV ==1) then
+		#now we verify the value of prox.comm.enable
+		if (prox.comm.rx != ACK_DESTINATION_ID and prox.comm.rx == (MESSAGE + 1)) then
+			ACK_MESSAGE = prox.comm.rx
+			ACK_MESSAGE_ID_RCV = 1
+		end
 	end
-
-	
-		
-				
-#______________________________________________________________________________________
-#									SUBROUTINES CONTROLS RECEIVING DATA FROM DS
-#----------------------------------------------------------------------------------------------------------------------------------
-sub RECIEVE_SENDER_ID_FROM_DS
-	if (SENDER_ID_FROM_DS < 1 and prox.comm.rx != ACCEPT_REQUEST and prox.comm.rx !=445) then
-			SENDER_ID_FROM_DS = prox.comm.rx # save the SENDER_ID RECEIVED FROM DS
-			SENDER_ID = SENDER_ID_FROM_DS
-			SENDER_ID_TO_DS = SENDER_ID
-	end
-sub RECIEVE_DESTINATION_ID_FROM_DS
-	if (prox.comm.rx != SENDER_ID_FROM_DS and prox.comm.rx != ACK_SENDER_ID_SENT_TO_DS) then
-		#destination value must be unique from the sender_id received or ack sent
-		DESTINATION_ID_FROM_DS	= prox.comm.rx # save destination received	
-		DESTINATION_ID = DESTINATION_ID_FROM_DS	
-		DESTINATION_ID_TO_DS = DESTINATION_ID
-	end
-sub RECIEVE_MESSAGE_ID_FROM_DS
-	if (prox.comm.rx!=DESTINATION_ID_FROM_DS and prox.comm.rx!=ACK_DESTINATION_ID_SENT_TO_DS) then
-		MESSAGE_FROM_DS = prox.comm.rx
-		MESSAGE = MESSAGE_FROM_DS
-		MESSAGE_TO_DS = MESSAGE
-	end
-										
-
-
-
-
-
-
-
-
-
-
-
-
-
-
