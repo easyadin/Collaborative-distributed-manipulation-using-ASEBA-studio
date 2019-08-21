@@ -6,13 +6,21 @@
 #------------------ 2. THYMIO HAS BROADCAST RECEIVER
 #----------------------------- FOR BBRS TO RECEIVE TO MESSAGE ITS ID MUST MATCH THE CORRESPONDING DESTINATION_ID BROADCASTED BY THE SERVICE DELIVERY
 
-var init_RESET = 0
+	#------------------ RESET SUBROUTINES -------------------------
+	# A reset is necessary when robots get wrong value 
+	#  i have defined a threshold to improve performance of message passed
+	# 1. ID TO BE ASSIGNED MUST BE DIVISIBLE BY PRIME NUMBERS 3 AND 5 eg 15, 45
+	# 2. THE ACKS TO BE SENT MUST BE THE SENDER_ID + 1000 AND DESTINATION_ID + 1001 AND MESSAGE + 1
+	# THRESHOLD FOR SENDER_ID ACK and DESTINATION_ID ACK IS BETWEEN (1000 - 1056)
+	# THRESHOLD FOR MESSAGE IS (MESSAGE + 1)
+	# THIS IS CALLED WHE WRONG VALUES ARE PASSED TO RESET ALL VARIABLES TO DEFAULTSvar init_RESET = 0
+	
 var init_BBRS_as_Sender = 0
 var init_BBRS_as_Reciever = 0
 #-------------default variables--
-var BBRS_ID = 54
+var BBRS_ID = 30
 var SENDER_ID = BBRS_ID
-var DESTINATION_ID = 55 # THIS VARIABLE IS ASSOCIATED TO A KNOWN BBRS WITH ID 55
+var DESTINATION_ID = 30 # THIS VARIABLE IS ASSOCIATED TO A KNOWN BBRS WITH ID 55
 var MESSAGE = 20 # message to sent using ASCI CODE [ ~ hi ~ ] without the zero
 
 #----------required ACKS FROM SERVICE DELIVERY to ensure message has being passed
@@ -130,7 +138,6 @@ onevent prox.comm
 		init_BBRS_as_Sender = 0
 		prox.comm.tx = -1
 	end			
-
 # CODE FOR BBRS AS SENDER ENDS END HERE |---->	
 
 # CODE FOR BBRS RECEIVER STARTS HERE
@@ -152,9 +159,11 @@ if (init_BBRS_as_Reciever == 1) then
 		end
 	end
 end
+
 if (NEUTRAL_ACKS_SENT == 1) then
 	call leds.top(0,32,0)
 	call sound.system(5)
+	NEUTRAL_ACKS_SENT = 0
 end
 
 
