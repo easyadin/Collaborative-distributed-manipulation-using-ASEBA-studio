@@ -1,0 +1,402 @@
+<!DOCTYPE aesl-source>
+<network>
+
+
+<!--list of global events-->
+
+
+<!--node -->
+<node name=""><![CDATA[#NO DISTINCTION BETWEEN SENDER AND RECEIVER
+#BOTH WILL SEND A VALUE LETS SAY 20 AND 21
+var MESSAGE = 21 # 
+var MESSAGE_RECEIVED = 0
+var COUNT_UNTIL_CLEAR_MESSAGE = 0
+var CLEAR_MESSAGE = 0
+call leds.top(32,32,32)
+
+call prox.comm.enable(1)
+
+prox.comm.tx = MESSAGE
+
+timer.period[0] = 300
+
+onevent timer0
+	prox.comm.tx = MESSAGE
+	call prox.comm.enable(1)
+	CLEAR_MESSAGE++
+ 	#NOW WE TURN OF THE COMM AND ON AGAIN
+ 	if (CLEAR_MESSAGE > 40) then
+ 		call prox.comm.enable(0)
+ 		CLEAR_MESSAGE = 0
+ 		##call leds.top(32,0,0)
+ 	end
+ 	
+ 	if (prox.comm.rx == 20) then
+ 		call leds.top(0,32,0)
+ 	end
+ 	
+ 	if (prox.comm.rx != 20) then
+ 		call leds.top(32,0,0)
+ 	end
+ 	
+ 	if (prox.comm.rx == 0) then
+		call leds.top(32,0,0)
+	end
+	
+	if (prox.comm.rx != 0) then
+		#call leds.top(32,32,0)
+	end
+onevent prox.comm
+	#call leds.top(32,32,0) ## initial color yellow
+	
+	if (prox.comm.rx == 20) then
+		#START A COUNTER	
+		COUNT_UNTIL_CLEAR_MESSAGE++
+		MESSAGE_RECEIVED = prox.comm.rx		
+	end
+	
+	
+	if (MESSAGE == MESSAGE_RECEIVED) then
+		call leds.top(0,32,0)
+		COUNT_UNTIL_CLEAR_MESSAGE++
+	end
+	
+	
+	if (COUNT_UNTIL_CLEAR_MESSAGE > 100) then
+			MESSAGE_RECEIVED = 0
+			prox.comm.tx = MESSAGE
+			COUNT_UNTIL_CLEAR_MESSAGE =0
+	end
+	
+	
+	if (COUNT_UNTIL_CLEAR_MESSAGE > 100 and MESSAGE_RECEIVED == 0) then
+			call leds.top(32,0,0)
+			MESSAGE_RECEIVED = 0
+			prox.comm.tx = MESSAGE
+			COUNT_UNTIL_CLEAR_MESSAGE = 0
+	end
+	]]></node>
+
+
+<!--node Thymio-II Wireless-->
+<node name="Thymio-II Wireless" nodeId="{65197d0e-96ce-4c55-863c-711700c15f2c}"><![CDATA[#EXPECTED MESSAGES ARE 21 AND 20
+var MESSAGE_ARRAY[2]
+var COUNTE
+var COUNT_UNTIL_CLEAR_MESSAGE_1 = 0
+var COUNT_UNTIL_CLEAR_MESSAGE_2 = 0
+var COUNT_UNTIL_RESET = 0
+
+var SEND_1 = 0
+var SEND_2 = 0
+
+call prox.comm.enable(1)
+
+call leds.top(32,32,32)
+
+timer.period[0] = 200
+
+onevent timer0
+	COUNT_UNTIL_RESET++
+	call prox.comm.enable(1)
+	if (COUNT_UNTIL_RESET > 70) then
+		MESSAGE_ARRAY[0] = 0
+		MESSAGE_ARRAY[1] = 0
+		COUNT_UNTIL_RESET = 0
+		call prox.comm.enable(0)
+	end
+	
+	SEND_1++
+	if (SEND_1 > 20) then
+		prox.comm.tx = MESSAGE_ARRAY[0]
+		SEND_1 = 0
+	end
+	
+	SEND_2++
+	if (SEND_2 > 40) then
+		prox.comm.tx = MESSAGE_ARRAY[1]
+		SEND_2 = 0
+	end
+	
+	if (prox.comm.rx == 0) then
+		call leds.top(32,0,0)
+	end
+	
+
+onevent prox.comm
+#save the value only
+	if(prox.comm.rx == 20) then
+		MESSAGE_ARRAY[0] = prox.comm.rx
+		call leds.top(32,32,0)
+	end
+	
+	#save the value onlu
+	if (prox.comm.rx == 21) then
+		MESSAGE_ARRAY[1] = prox.comm.rx 
+		call leds.top(32,32,0)
+	end
+	
+	if (MESSAGE_ARRAY[0] !=0 and MESSAGE_ARRAY[1] !=0) then
+		call leds.top(0,32,0)
+	end]]></node>
+
+
+<!--node -->
+<node name=""><![CDATA[#EXPECTED MESSAGES ARE 21 AND 20
+var MESSAGE_ARRAY[2]
+var COUNTE
+var COUNT_UNTIL_CLEAR_MESSAGE_1 = 0
+var COUNT_UNTIL_CLEAR_MESSAGE_2 = 0
+var COUNT_UNTIL_RESET = 0
+
+var SEND_1 = 0
+var SEND_2 = 0
+
+call prox.comm.enable(1)
+
+call leds.top(32,32,32)
+
+timer.period[0] = 200
+
+onevent timer0
+	COUNT_UNTIL_RESET++
+	call prox.comm.enable(1)
+	if (COUNT_UNTIL_RESET > 70) then
+		MESSAGE_ARRAY[0] = 0
+		MESSAGE_ARRAY[1] = 0
+		COUNT_UNTIL_RESET = 0
+		call prox.comm.enable(0)
+	end
+	
+	SEND_1++
+	if (SEND_1 > 20) then
+		prox.comm.tx = MESSAGE_ARRAY[0]
+		SEND_1 = 0
+	end
+	
+	SEND_2++
+	if (SEND_2 > 40) then
+		prox.comm.tx = MESSAGE_ARRAY[1]
+		SEND_2 = 0
+	end
+	
+	if (prox.comm.rx == 0) then
+		call leds.top(32,0,0)
+	end
+	
+
+onevent prox.comm
+#save the value only
+	if(prox.comm.rx == 20) then
+		MESSAGE_ARRAY[0] = prox.comm.rx
+		call leds.top(32,32,0)
+	end
+	
+	#save the value onlu
+	if (prox.comm.rx == 21) then
+		MESSAGE_ARRAY[1] = prox.comm.rx 
+		call leds.top(32,32,0)
+	end
+	
+	if (MESSAGE_ARRAY[0] !=0 and MESSAGE_ARRAY[1] !=0) then
+		call leds.top(0,32,0)
+	end]]></node>
+
+
+<!--node -->
+<node name=""><![CDATA[#EXPECTED MESSAGES ARE 21 AND 20
+var MESSAGE_ARRAY[2]
+var COUNTE
+var COUNT_UNTIL_CLEAR_MESSAGE_1 = 0
+var COUNT_UNTIL_CLEAR_MESSAGE_2 = 0
+var COUNT_UNTIL_RESET = 0
+
+var SEND_1 = 0
+var SEND_2 = 0
+
+call prox.comm.enable(1)
+
+call leds.top(32,32,32)
+
+timer.period[0] = 200
+
+onevent timer0
+	COUNT_UNTIL_RESET++
+	call prox.comm.enable(1)
+	if (COUNT_UNTIL_RESET > 70) then
+		MESSAGE_ARRAY[0] = 0
+		MESSAGE_ARRAY[1] = 0
+		COUNT_UNTIL_RESET = 0
+		call prox.comm.enable(0)
+	end
+	
+	SEND_1++
+	if (SEND_1 > 20) then
+		prox.comm.tx = MESSAGE_ARRAY[0]
+		SEND_1 = 0
+	end
+	
+	SEND_2++
+	if (SEND_2 > 30) then
+		prox.comm.tx = MESSAGE_ARRAY[1]
+		SEND_2 = 0
+	end
+	
+	if (prox.comm.rx == 0) then
+		call leds.top(32,0,0)
+	end
+	
+
+onevent prox.comm
+#save the value only
+	if(prox.comm.rx == 20) then
+		MESSAGE_ARRAY[0] = prox.comm.rx
+		call leds.top(32,32,0)
+	end
+	
+	#save the value onlu
+	if (prox.comm.rx == 21) then
+		MESSAGE_ARRAY[1] = prox.comm.rx 
+		call leds.top(32,32,0)
+	end
+	
+	if (MESSAGE_ARRAY[0] !=0 and MESSAGE_ARRAY[1] !=0) then
+		call leds.top(0,32,0)
+	end]]></node>
+
+
+<!--node -->
+<node name=""><![CDATA[#EXPECTED MESSAGES ARE 21 AND 20
+var MESSAGE_ARRAY[2]
+var COUNTE
+var COUNT_UNTIL_CLEAR_MESSAGE_1 = 0
+var COUNT_UNTIL_CLEAR_MESSAGE_2 = 0
+var COUNT_UNTIL_RESET = 0
+
+var SEND_1 = 0
+var SEND_2 = 0
+
+call prox.comm.enable(1)
+
+call leds.top(32,32,32)
+
+timer.period[0] = 200
+
+onevent timer0
+	COUNT_UNTIL_RESET++
+	call prox.comm.enable(1)
+	if (COUNT_UNTIL_RESET > 70) then
+		MESSAGE_ARRAY[0] = 0
+		MESSAGE_ARRAY[1] = 0
+		COUNT_UNTIL_RESET = 0
+		call prox.comm.enable(0)
+	end
+	
+	SEND_1++
+	if (SEND_1 > 20) then
+		prox.comm.tx = MESSAGE_ARRAY[0]
+		SEND_1 = 0
+	end
+	
+	SEND_2++
+	if (SEND_2 > 40) then
+		prox.comm.tx = MESSAGE_ARRAY[1]
+		SEND_2 = 0
+	end
+	
+	if (prox.comm.rx == 0) then
+		call leds.top(32,0,0)
+	end
+	
+
+onevent prox.comm
+#save the value only
+	if(prox.comm.rx == 20) then
+		MESSAGE_ARRAY[0] = prox.comm.rx
+		call leds.top(32,32,0)
+	end
+	
+	#save the value onlu
+	if (prox.comm.rx == 21) then
+		MESSAGE_ARRAY[1] = prox.comm.rx 
+		call leds.top(32,32,0)
+	end
+	
+	if (MESSAGE_ARRAY[0] !=0 and MESSAGE_ARRAY[1] !=0) then
+		call leds.top(0,32,0)
+	end]]></node>
+
+
+<!--node -->
+<node name=""><![CDATA[#NO DISTINCTION BETWEEN SENDER AND RECEIVER
+#BOTH WILL SEND A VALUE LETS SAY 20 AND 21
+var MESSAGE = 20 # 
+var MESSAGE_RECEIVED = 0
+var COUNT_UNTIL_CLEAR_MESSAGE = 0
+var CLEAR_MESSAGE = 0
+call leds.top(32,32,32)
+
+call prox.comm.enable(1)
+
+prox.comm.tx = MESSAGE
+
+timer.period[0] = 300
+
+onevent timer0
+	prox.comm.tx = MESSAGE
+	call prox.comm.enable(1)
+	CLEAR_MESSAGE++
+ 	#NOW WE TURN OF THE COMM AND ON AGAIN
+ 	if (CLEAR_MESSAGE > 40) then
+ 		call prox.comm.enable(0)
+ 		CLEAR_MESSAGE = 0
+ 		##call leds.top(32,0,0)
+ 	end
+ 	
+ 	if (prox.comm.rx == 21) then
+ 		call leds.top(0,32,0)
+ 	end
+ 	
+ 	if (prox.comm.rx != 21) then
+ 		call leds.top(32,0,0)
+ 	end
+ 	
+ 	if (prox.comm.rx == 0) then
+		call leds.top(32,0,0)
+	end
+	
+	if (prox.comm.rx != 0) then
+		#call leds.top(32,32,0)
+	end
+onevent prox.comm
+	#call leds.top(32,32,0) ## initial color yellow
+	
+	if (prox.comm.rx == 21) then
+		#START A COUNTER	
+		COUNT_UNTIL_CLEAR_MESSAGE++
+		MESSAGE_RECEIVED = prox.comm.rx		
+	end
+	
+	
+	if (MESSAGE == MESSAGE_RECEIVED) then
+		call leds.top(0,32,0)
+		COUNT_UNTIL_CLEAR_MESSAGE++
+	end
+	
+	
+	if (COUNT_UNTIL_CLEAR_MESSAGE > 100) then
+			MESSAGE_RECEIVED = 0
+			prox.comm.tx = MESSAGE
+			COUNT_UNTIL_CLEAR_MESSAGE =0
+	end
+	
+	
+	if (COUNT_UNTIL_CLEAR_MESSAGE > 100 and MESSAGE_RECEIVED == 0) then
+			call leds.top(32,0,0)
+			MESSAGE_RECEIVED = 0
+			prox.comm.tx = MESSAGE
+			COUNT_UNTIL_CLEAR_MESSAGE = 0
+	end
+	]]></node>
+
+
+</network>
