@@ -1,0 +1,274 @@
+#------------------------- THYMIO - BEACON - BROADCAST - RECEIVER OR SENDER ------- ACRONYM (BBRS)
+#-------------------- THERE ARE TWO MOST IMPORTANT BEHAVIOUR TO EXPECT FROM THE BBRS ---------
+#----------------- 1. THYMIO HAS BROADCAST SENDER
+#---------------------- FOR BBRS TO SEND MESSAGE FROM A KNOW BBRS_ID IT MUST PASSED THE MESSAGE TO A	TO DELIVERY SERVICE ROBOT
+
+#------------------ 2. THYMIO HAS BROADCAST RECEIVER
+#----------------------------- FOR BBRS TO RECEIVE TO MESSAGE ITS ID MUST MATCH THE CORRESPONDING DESTINATION_ID BROADCASTED BY THE SERVICE DELIVERY
+
+	#------------------ RESET SUBROUTINES -------------------------
+	# A reset is necessary when robots get wrong value
+	# i have defined a threshold to improve performance of message passed
+	# 1. ID TO BE ASSIGNED MUST BE DIVISIBLE BY PRIME NUMBERS 3 AND 5 eg 15, 45
+	#i,e, 15,30,45,60,75,90,105,120,135,150,165,180,195,210,225,240,255,270,285,300
+	# 2. THE ACKS TO BE SENT MUST BE THE SENDER_ID + 1000 AND DESTINATION_ID + 1001 AND MESSAGE + 1
+	# THRESHOLD FOR SENDER_ID ACK and DESTINATION_ID ACK IS BETWEEN (1000 - 1056)
+	# THRESHOLD FOR MESSAGE IS (MESSAGE + 1)
+	# THIS IS CALLED WHEN WRONG VALUES ARE PASSED TO RESET ALL VARIABLES TO DEFAULTSvar init_RESET = 0
+
+var init_BBRS_as_Sender = 1# --set BBRS AS SENDER
+var init_BBRS_as_Reciever = 0 # --set BBRS AS RECEIVER
+#-------------default variables--
+var BBRS_ID = 15
+var SENDER_ID = BBRS_ID
+var DESTINATION_ID = 30 # THIS VARIABLE IS ASSOCIATED TO A KNOWN BBRS WITH ID 55
+var MESSAGE = 20 # message to sent using ASCI CODE [ ~ hi ~ ] without the zero
+
+#----------required ACKS FROM SERVICE DELIVERY to ensure message has being passed
+var ACK_SENDER_ID = 0 # THIS IS RECEIVED FROM SERVICE DELIVERY
+var ACK_DESTINATION_ID = 0 # THIS IS RECEIVED FROM SERVICE DELIVERY
+var ACK_MESSAGE = 0
+#------------------------------------------- 3 ACKS REQUIRED TO VERIFY THE VALUE PASSED BETWEEN BBRS AND DS
+var ACK_SENDER_ID_RCV = 0
+var ACK_DESTINATION_ID_RCV = 0
+var ACK_MESSAGE_ID_RCV = 0
+#_____________________________________________________________________________________VARIABLE COUNTER FOR TIMERS
+var countSetTimer0 = 0
+var timerWait = 0
+var initTimer2ForSound = 0
+
+#Delivery Details is stored here
+var MESSAGE_FROM_SENDER = 0
+
+var DS_FOUND = 0
+var NEUTRAL_ACKS_SENT = 0 # THIS ACK IS SENT BY RECEIVER
+var COUNT_TO_RESET_FOR_SENDER = 0
+var COUNT_TO_RESET_FOR_RECEIVER = 0
+
+var INIT_RESET = 0 # this triggered only when BBRS reciever has received message passed through the chain
+
+call prox.comm.enable(1)
+call leds.top(32,32,32)
+call sound.system(5)
+
+#_+______________________________________________________________________________________________PROX EVENT TO SEND AND RECIEVE MESSAGE
+
+#HERE THE SENDER INITIATE COMMUNICATION BY SENDING OWN BBRS_ID
+if (init_BBRS_as_Sender == 1 and ACK_SENDER_ID_RCV == 0 and ACK_DESTINATION_ID_RCV ==0 and ACK_MESSAGE_ID_RCV ==0 and INIT_RESET == 0) then
+	timer.period[0] = 200
+	prox.comm.tx = SENDER_ID#---------------BROADCAST OWN BBRS_ID	
+end
+
+
+#____________________________________________________________________________________________________TIMER 0
+onevent timer0
+		if (init_BBRS_as_Sender ==1) then
+			#call sound.system(5)
+			countSetTimer0++
+			call leds.top(32,0,0) 	
+		
+			if (countSetTimer0 > 0) then
+				call leds.top(0,0,0) 	
+				countSetTimer0 = 0
+				timer.period[0] = 0 # timer sleep
+				initTimer2ForSound =1 # variable required so that timer 1 is reusable
+				timer.period[1] = 500 # init timer 1
+			end
+		end
+	
+	
+	
+#___________________________________________________________________________________________________TIMER 1
+onevent timer1
+		if (init_BBRS_as_Sender == 1) then
+					if (initTimer2ForSound == 1) then
+						timerWait++
+							if (timerWait > 2) then
+									call leds.top(32,0,0) 	
+								#	call sound.system(5)
+									timer.period[0] = 200
+									timerWait = 0
+							end
+					end
+		end
+		
+		
+		
+##### RESET AFTER COUNTDOWN ELAPSE FOR THE RECEIVER
+if(NEUTRAL_ACKS_SENT == 1 and init_BBRS_as_Reciever == 1 ) then
+	prox.comm.tx = 202 # this message is passed back to indicate that message recieved and the chain turn green
+	COUNT_TO_RESET_FOR_RECEIVER++
+		if (COUNT_TO_RESET_FOR_RECEIVER > 70) then
+			prox.comm.tx = -1
+			DS_FOUND = 0
+			MESSAGE_FROM_SENDER = 0
+			MESSAGE = 0
+			NEUTRAL_ACKS_SENT = 0
+			call leds.top(0,0,32) # RESET COMPLETE
+			COUNT_TO_RESET_FOR_RECEIVER = 0
+			timer.period[1] = 0
+		end
+	end
+	
+	
+	
+### RESET AFTER COUNTDOWN ELAPSE FOR SENDER
+# AS SENDER
+if (INIT_RESET == 1 and init_BBRS_as_Sender ==0) then
+	call leds.top(0,32,0)
+	COUNT_TO_RESET_FOR_SENDER++
+	if (COUNT_TO_RESET_FOR_SENDER > 100) then
+		#reset all ack recieved
+			ACK_SENDER_ID = 0
+			ACK_SENDER_ID_RCV = 0
+			ACK_DESTINATION_ID = 0
+			ACK_DESTINATION_ID_RCV = 0
+			ACK_MESSAGE = 0
+			ACK_MESSAGE_ID_RCV = 0
+			INIT_RESET = 0
+			##broadcast ID again
+			prox.comm.tx = SENDER_ID
+			COUNT_TO_RESET_FOR_SENDER = 0
+			init_BBRS_as_Sender = 1
+			call prox.comm.enable(1)
+			timer.period[1] = 0
+	end
+			
+end
+	
+				
+
+
+
+
+onevent prox.comm
+	## THE SENDER WILL EXPECT A REPLY PASSED THROUGH THE CHAIN TO TURN GREEN THEN INITS TIMER TO RESET
+	if(prox.comm.rx == 202 and init_BBRS_as_Reciever ==0)then
+		call leds.top(0,32,0)
+	#	INIT_RESET = 1
+		call prox.comm.enable(0)
+		timer.period[1] = 200
+	end	
+	
+#CODE FOR BBRS HAS SENDER STARTS HERE###############################################################
+	if (init_BBRS_as_Sender == 1 and INIT_RESET !=1) then #------------------------------------ BEHAVIOUR HAS A BROADCAST SENDER
+			
+
+			if (ACK_SENDER_ID < 1 and prox.comm.tx == SENDER_ID) then
+				callsub GET_ACK_SENDER_ID # an ack expected from DS
+			end
+		
+		
+		
+			if (ACK_SENDER_ID_RCV == 1 and ACK_DESTINATION_ID < 1) then
+				call leds.top(32,5,0)
+				prox.comm.tx = DESTINATION_ID # SEND DESTINATION_ID SINCE WE NOW HAVE CONFIRMATION FOR SENDER_ID SENT
+				callsub GET_ACK_DESTINATION # call subroutine to get the ack for destination_id sent
+			end
+			
+			
+			
+			#if conditions above are met i.e when we have sent required ids and recieved ack for sender_id and destination_id sent
+			#now we can send the main message to complete the 3 - way handshake
+			if (ACK_DESTINATION_ID_RCV == 1 and ACK_MESSAGE < 1) then
+				call leds.top(32,10,0)
+				prox.comm.tx = MESSAGE # send the main message
+				callsub GET_ACK_MESSAGE # get the ack for message sent
+			end
+	end	
+
+				
+												
+	# now that we have recieved all ACK for sender_id , destination_id and message sent to DS from BBRS
+	if(ACK_SENDER_ID_RCV == 1 and ACK_DESTINATION_ID_RCV ==1 and ACK_MESSAGE_ID_RCV ==1 and INIT_RESET !=1) then
+		call leds.top(0,32,0) # turn green
+		##prox.comm.tx =-1
+		init_BBRS_as_Sender = 0
+		prox.comm.tx = -1
+	end
+	
+	
+	
+# CODE FOR BBRS AS SENDER ENDS END HERE |---->	###########################################
+############################################################################
+############################################################################
+############################################################################
+############################################################################
+############################################################################
+
+
+# CODE SECTION FOR RECEIVER
+# CODE FOR BBRS RECEIVER STARTS HERE##################################################
+#listen for broadcast
+#assign default broadcast value is 445 indicates that DS is in range with data from sender
+if (init_BBRS_as_Reciever == 1) then
+	if (prox.comm.rx == 445 and MESSAGE_FROM_SENDER < 1) then
+		DS_FOUND = 1
+	end
+		
+		
+	if (DS_FOUND == 1 and MESSAGE_FROM_SENDER <1) then
+		#send your BBRS_ID
+		prox.comm.tx = BBRS_ID
+		#GET THE MESSAGE FROM DS
+		if (prox.comm.rx != BBRS_ID and prox.comm.rx != 446 and prox.comm.rx !=445 and MESSAGE_FROM_SENDER < 1) then
+			MESSAGE_FROM_SENDER = prox.comm.rx # save the message |/|/|/|/|/|/|
+			#send ack to DS_SENDER
+			prox.comm.tx = MESSAGE_FROM_SENDER + 1
+		#	NEUTRAL_ACKS_SENT = 1
+			call leds.top(0,32,0)
+		end
+	end
+end
+
+
+# MESSAGE FROM SENDER WOULD HAVE BEEN RECEIVED AT THIS POINT
+if (NEUTRAL_ACKS_SENT == 1) then
+	call leds.top(0,32,0) ##receuved indicator
+	call sound.system(5)
+	#NEUTRAL_ACKS_SENT = 0
+	## when all message passed successfully init timer
+	timer.period[1] = 200 # timer to trigger reset
+	
+end
+
+## CODE SEGMENT FOR RECEIVER ENDS HERE#################################################
+
+
+#SUBROUTINES FOR SENDING REQUIRED VALUE TO DS
+sub GET_ACK_SENDER_ID
+#this happens only if the ACK_SENDER_ID = 0 and prox.comm.tx = SENDER_ID at the moment
+	if (ACK_SENDER_ID < 1 and prox.comm.tx == SENDER_ID) then
+		#now get the value of prox.comm.rx if its passed the simple computation
+		#i.e we verify what the ACK_SENDER_ID sent from the DS
+		if (prox.comm.rx == (SENDER_ID + 1000)) then
+			ACK_SENDER_ID =prox.comm.rx #save the ACK recieved
+			ACK_SENDER_ID_RCV = 1
+		end
+	end
+	
+		
+				
+sub GET_ACK_DESTINATION
+	#this happens only if we have recvd confirmation that ack for the SENDER_ID sent
+	if (ACK_DESTINATION_ID <1 and ACK_SENDER_ID_RCV == 1) then
+		#just to be sure we get the right value we assert the condition again
+		#now we verify the value of the prox.comm.rx
+		if (prox.comm.rx !=ACK_SENDER_ID and prox.comm.rx == (1001+DESTINATION_ID)) then # we require value not the ack recvd for SENDER_ID and if meet the ack computation
+			ACK_DESTINATION_ID = prox.comm.rx # save the ACK recieved
+			ACK_DESTINATION_ID_RCV = 1
+		end
+	end
+
+	
+			
+sub GET_ACK_MESSAGE
+	#this only if we have recieved both ack for sender_id and destination sent
+	if (ACK_MESSAGE <1 and ACK_DESTINATION_ID_RCV ==1) then
+		#now we verify the value of prox.comm.enable
+		if (prox.comm.rx != ACK_DESTINATION_ID and prox.comm.rx == (MESSAGE + 1)) then
+			ACK_MESSAGE = prox.comm.rx
+			ACK_MESSAGE_ID_RCV = 1
+		end
+	end
+

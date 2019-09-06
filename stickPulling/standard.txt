@@ -1,0 +1,296 @@
+#Collision Avoidance
+#Robot is intended to avoid obstacles and give feedback obstacle in range of sensor readings
+
+#	var thymioBeaconID = 0
+var thymioWorker = 04
+var timeOut = 404
+var timeOutCounter = 0
+var countDownTillCollab = 0
+var countDownAfterCollab = 0
+var initAfterSuccessfulCollab = 0
+var enableCommAfterTimeout = 0
+
+var isMovingAfter404Error = 0
+
+var staticSensorThreshold = 3200
+
+var sensorFrontMax = 0 
+var sensorBackMax = 0
+
+var reverseProtocal = 0
+
+var detectDeadEnd = 0
+
+var kickStart = 0
+
+var reverseFromLeft = 0
+var reverseFromRight = 0
+
+var initiateReverse = 0
+var countLeftSteps = 0
+var countRightSteps = 0
+var countFrontSteps = 0
+var sensorSumFront = 0
+var sensorSumBack = 0 
+
+var shouldMove = 0 # holds the value moving 1 and not moving 0
+var i =0  #variable set default to 1
+var sensorFrontArray[5] #array to hold sensor array at the front
+var sensorBackArray[2] # array to hold sensor array at the back
+var overrideRemote = 0
+var direction = 0 # 0: hasn-t just turned; 1: just turned left; 2: just turned right; 3: just moved back
+
+#initial movement disabled
+motor.left.target = 0
+motor.right.target = 0
+
+ #set led default to off
+ call leds.bottom.right(0,0,0)
+ call leds.bottom.left(0,0,0)
+# call leds.top(32,32,0)
+
+#------------------------------------------------------Remote Control Signal to Robot------------------------------------------------------
+  #here we init robot movement forwared with remote control
+onevent rc5
+ if (rc5.command == 53) then
+ 	shouldMove = 1
+ 	call prox.comm.enable(1)
+ 	call leds.top(31,31,12) #change color code to specified	
+ 
+ #halt robot movement on remote signal 13 or 87
+elseif (rc5.command == 87) then
+ 	call leds.top(31,0,0) # change color to red on remote signal 13
+ 	shouldMove = 0 #set moving to false
+ 	motor.left.target = 0
+ 	motor.right.target = 0
+end
+ 	
+#-----------------------------------------------------------------------------Collision Avoidance---------------------------------------------------------	
+ #obstacle avoidance
+onevent prox	
+	# front sensor array
+	sensorFrontArray[0] = prox.horizontal[0]
+	sensorFrontArray[1] = prox.horizontal[1]
+	sensorFrontArray[2] = prox.horizontal[2]
+	sensorFrontArray[3] = prox.horizontal[3]
+	sensorFrontArray[4] = prox.horizontal[4]
+	# back sensor array
+	sensorBackArray[0] =  prox.horizontal[5]
+	sensorBackArray[1] =  prox.horizontal[6]
+	#max of front sensor array
+	sensorFrontMax = 0
+	#max of back sensor array
+	sensorBackMax = 0
+	#sum of front sensor array
+	sensorSumFront = 0
+	#sum of back sensor array
+	sensorSumBack = 0
+#----------------------------------------------Loop to track sensor readings ----------------------------------	
+	# loop to find max front sensors
+	for i in 0:4 do
+		if (sensorFrontArray[i] > sensorFrontMax) then
+			sensorFrontMax = sensorFrontArray[i]
+		end
+	end
+	
+	# loop to find max back sensors
+	for i in 0:1 do
+		if (sensorBackArray[i] > sensorBackMax) then
+			sensorBackMax = sensorBackArray[i]
+		end
+	end
+	
+	# sum of front sensors
+	for i in 0:4 do
+		sensorSumFront = sensorSumFront+ sensorFrontArray[i]
+	end
+	
+	# sum of back sensors
+	for i in 0:1 do
+		sensorSumBack = sensorSumBack+ sensorBackArray[i]
+	end
+#------------------------------------------Loop declararations Ends here--------------------------------------------	
+
+if (shouldMove == 1) then
+	#call prox.comm.enable(1)
+	call leds.top(0,31,0)
+	if (sensorFrontMax < 1400) then # only moves forward when no sensor readings higher than 0
+			call leds.top(0,31,0)
+			motor.left.target = 2000
+			motor.right.target = 2000
+			reverseFromRight = 0
+			reverseFromLeft = 0
+	 	elseif (prox.horizontal[1] > 1400 or prox.horizontal[0] > 1400) then
+	 		#turn left
+	 		call leds.top(31,0,0)
+	 		motor.left.target = 100
+	 		motor.right.target = -200
+	 		reverseFromLeft = 1
+	 		countLeftSteps++
+	 		
+		elseif (prox.horizontal[3] > 1400 or prox.horizontal[4]>1400) then
+	 		#turn right
+	 		call leds.top(31,0,0)
+	 		motor.right.target = 100
+			motor.left.target = -200
+			#reverseFromRight = 1
+			countRightSteps++	
+			
+		#middle sensor at 2
+			elseif (sensorFrontMax == prox.horizontal[2]) then
+	 		#turn right
+	 		call leds.top(31,31,0)
+	 		motor.right.target = -500
+			motor.left.target =	 -500
+	 		#countFrontSteps++
+	 		#motor.left.target = 0
+			#motor.left.target = -50
+			#robot stuck in front?
+			elseif (prox.horizontal[2] == sensorFrontMax and prox.horizontal[2] == sensorSumFront) then
+				countFrontSteps++
+				
+			#check rear sensor
+			elseif (sensorSumBack > 7000) then
+			motor.right.target = 500
+			motor.left.target =	 500			
+	end	
+
+#deadEnd?
+if (sensorSumFront > 6000 and sensorSumFront < 20000 ) then
+	detectDeadEnd++
+end
+
+if (detectDeadEnd >1 and sensorSumBack <1000) then
+	call leds.top(0,0,32)
+	motor.right.target = -900
+	motor.left.target =	 0
+	detectDeadEnd = 0
+end
+
+if (countRightSteps > 2) then
+	motor.right.target = 500
+	motor.left.target = 500
+	countRightSteps = 0
+	
+elseif (countLeftSteps  > 2) then
+	motor.right.target = 500
+	motor.left.target = 500
+	countLeftSteps = 0
+	
+elseif (countFrontSteps > 1) then
+	motor.right.target = -200
+	motor.left.target = -200
+	countFrontSteps = 0
+	
+end
+
+
+if (sensorFrontMax > 3000) then
+	initiateReverse++
+end
+
+if(initiateReverse >2) then
+	call leds.top(32,0,0)
+	motor.right.target = -900
+	motor.left.target = -900
+	initiateReverse=0
+	reverseProtocal++
+end
+
+if (reverseProtocal > 4) then
+	motor.right.target = 1000
+	motor.left.target = 1000
+	reverseProtocal=0
+end
+
+end
+#----------------------------COLLISION AVOIDANCE END HERE----------------------------------
+
+#------------------------------Thymio Worker ---------------------------------------
+
+
+
+prox.comm.tx = thymioWorker
+
+#call leds.top(0,0,32)
+
+onevent prox.comm
+	#------------listen for messages from thymioBeacon------------------------
+	
+	#-----------get confirmation from beacon---check if confirmation matches ID--------------
+	if (prox.comm.rx == thymioWorker) then
+				shouldMove = 0 # halt robot movement.
+				motor.left.target = 0
+				motor.right.target =0
+				call leds.top(32,32,0)
+				#call sound.system(7)
+				call sound.duration(0,10)
+		#at this point thymioWorker receives its ID from the beacon
+			#init timer
+			countDownTillCollab++ #counter for waiting time
+	elseif (prox.comm.rx == 20) then
+		call leds.top(0,32,0)
+		call prox.comm.enable(0)
+		shouldMove = 0
+		motor.left.target = 0
+		motor.right.target =0
+		timer.period[1] =100
+		initAfterSuccessfulCollab = 1
+	else
+	#	call leds.top(0,0,32) #default to blue
+	end
+
+#---------------check is waiting time elapsed-----------here we check if no collaboration response recieved from beacon then send 404 error message
+if (countDownTillCollab > 200) then	
+		call leds.top(32,0,0)
+		call prox.comm.enable(1)
+		prox.comm.tx = timeOut #send time out message to beacon if no successful collaboration message recieved
+		countDownTillCollab = 0
+		timeOutCounter =1 #next step set timeOutCounter to 1 to  enable randomWalk
+		timer.period[0] = 100 #init timer for 100ms to enable communication
+end
+#--------------------------disable communication and resume random walk------------------------	
+
+onevent timer1
+# set a variable that decides which count down variable is incremented 
+if (initAfterSuccessfulCollab == 1) then
+	countDownAfterCollab++# intention here is to enable communication if initAfterSuccessfulCollab = 1 and  countDownAfterCollab > 90 
+	#which is activated if the collaboration is successful
+	if (countDownAfterCollab > 90) then
+		shouldMove =1
+		timer.period[1] = 0 
+		countDownAfterCollab = 0
+		call prox.comm.enable(1)
+		initAfterSuccessfulCollab = 0
+	end
+	
+end
+
+
+# intention is to restart communication is the variable isMovingAfter404Error === 1
+if (isMovingAfter404Error == 1) then
+	#timer is currently running so enable prox.comm.enable(1) is enableCommAfterTimeout > 90 
+	#at this point robot already resumed randomwalk due to timeout because no colloboration successfull recieved
+	# inorder to walk robot must not communicate with beacon else it continues to recieve signal from beacon and wont walk away
+	enableCommAfterTimeout++
+	if (enableCommAfterTimeout > 99) then
+			call prox.comm.enable(1)
+			call sound.system(6)
+			enableCommAfterTimeout = 0
+			isMovingAfter404Error = 0
+	end
+		
+end
+
+
+
+onevent timer0
+	if (timeOutCounter == 1) then
+			call prox.comm.enable(0) #check if timeOutCounter === 1 and shut off communication so that robot can resume random walk
+			shouldMove = 1
+			timer.period[0] = 0 
+			isMovingAfter404Error =1
+			timer.period[1] = 100 
+			timeOutCounter = 0
+	end
+	

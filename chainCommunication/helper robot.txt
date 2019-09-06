@@ -1,0 +1,59 @@
+#EXPECTED MESSAGES ARE 21 AND 20
+var MESSAGE_ARRAY[2]
+var COUNTE
+var COUNT_UNTIL_CLEAR_MESSAGE_1 = 0
+var COUNT_UNTIL_CLEAR_MESSAGE_2 = 0
+var COUNT_UNTIL_RESET = 0
+
+var SEND_1 = 0
+var SEND_2 = 0
+
+call prox.comm.enable(1)
+
+call leds.top(32,32,32)
+
+timer.period[0] = 200
+
+onevent timer0
+	COUNT_UNTIL_RESET++
+	call prox.comm.enable(1)
+	if (COUNT_UNTIL_RESET > 70) then
+		MESSAGE_ARRAY[0] = 0
+		MESSAGE_ARRAY[1] = 0
+		COUNT_UNTIL_RESET = 0
+		call prox.comm.enable(0)
+	end
+	
+	SEND_1++
+	if (SEND_1 > 20) then
+		prox.comm.tx = MESSAGE_ARRAY[0]
+		SEND_1 = 0
+	end
+	
+	SEND_2++
+	if (SEND_2 > 40) then
+		prox.comm.tx = MESSAGE_ARRAY[1]
+		SEND_2 = 0
+	end
+	
+	if (prox.comm.rx == 0) then
+		call leds.top(32,0,0)
+	end
+	
+
+onevent prox.comm
+#save the value only
+	if(prox.comm.rx == 20) then
+		MESSAGE_ARRAY[0] = prox.comm.rx
+		call leds.top(32,32,0)
+	end
+	
+	#save the value onlu
+	if (prox.comm.rx == 21) then
+		MESSAGE_ARRAY[1] = prox.comm.rx 
+		call leds.top(32,32,0)
+	end
+	
+	if (MESSAGE_ARRAY[0] !=0 and MESSAGE_ARRAY[1] !=0) then
+		call leds.top(0,32,0)
+	end

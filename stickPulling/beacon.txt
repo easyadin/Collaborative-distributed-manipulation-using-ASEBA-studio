@@ -1,0 +1,209 @@
+# Stick pulling0 Experiment
+#------------------Thymio Beacon-------------------------
+
+var thymioWorker1 = 0 #first nearby thymio
+var thymioWorker2 = 0 #second neaby thymio
+
+var countToSelfDestruct = 0
+var closeCommunicationOnCollaborationSuccessful = 0
+var thymioResetActivated = 0
+var terminateCommunication = 0
+var worker1 = 0
+var worker2 = 0
+
+var restartCommunication = 0
+var errorMessage = 404
+
+var timerWait = 0
+var timerCounter = 0 
+
+var foundThymio = 0
+var countThymioWorkerFound = 0
+
+var i = 0
+
+var nearByThymioWorker[2]
+
+var thymioBeaconID = 101 # thymio beacon id to emitted to nearby thymio-workers
+
+var collaborationSuccessful = 0 #if collaboration successful value = 1 else 0
+var timeOut = 0 # time out value 0 is default value, -1 timeOut 
+
+call prox.comm.enable(1) #Infrared communication opened
+prox.comm.tx = thymioBeaconID #Broadcast Thymio BeaconID
+
+#led lights display set to off
+call leds.bottom.left(32,0,0)
+call leds.bottom.right(32,0,0)
+call leds.buttons(32,0,0,0)
+call leds.top(32,0,0)
+call leds.circle(32,0,0,0,0,0,0,0)
+call leds.prox.h(32,0,0,0,0,0,0,0)
+call leds.prox.v(32,0)
+call leds.rc(32)
+call leds.sound(32)
+call leds.temperature(32,0)
+
+timer.period[0] = 200 
+timer.period[1] = 0
+call sound.system(-1)
+
+
+#------------------end here------------------------------------------
+onevent timer0
+	call sound.system(5)
+	timerCounter++
+	
+call leds.top(32,0,0) 	
+call leds.bottom.left(32,0,0)
+call leds.bottom.right(32,0,0)
+call leds.buttons(32,32,32,32)
+call leds.circle(32,32,32,32,32,32,32,32)
+call leds.prox.h(32,32,32,32,32,32,32,32)
+call leds.prox.v(32,32)
+call leds.rc(32)
+call leds.sound(32)
+call leds.temperature(32,32)	
+
+if (timerCounter > 0) then #timer sleeps
+	timer.period[0] = 0 
+	timerCounter = 0
+	timer.period[1] = 500
+	
+call leds.top(32,0,0) 	
+call leds.bottom.left(32,0,0)
+call leds.bottom.right(32,0,0)
+call leds.buttons(32,32,32,32)
+call leds.circle(32,32,32,32,32,32,32,32)
+call leds.prox.h(32,32,32,32,32,32,32,32)
+call leds.prox.v(32,32)
+call leds.rc(32)
+call leds.sound(32)
+call leds.temperature(32,32)	
+end
+
+#--------------------timer 1
+onevent timer1
+	timerWait++
+if (timerWait > 2) then
+		call sound.system(5)
+		timer.period[0] = 200 
+		timerWait = 0
+		
+call leds.top(0,0,0) 	
+call leds.bottom.left(0,0,0)
+call leds.bottom.right(0,0,0)
+call leds.buttons(0,0,0,0)
+call leds.circle(0,0,0,0,0,0,0,0)
+call leds.prox.h(0,0,0,0,0,0,0,0)
+call leds.prox.v(0,0)
+call leds.rc(0)
+call leds.sound(0)
+call leds.temperature(0,0)	
+end
+# intention here is to turn off beacon when colloboration is successful and complete
+if (closeCommunicationOnCollaborationSuccessful == 1) then
+	timer.period[1] = 99  #init timer for 99 ms
+	call leds.top(0,0,32)
+end
+#--------------------------------Thymio Beacon communication with nearBy thymio-worker------------------------------------------------
+
+#------------count number of Thymio workers found-------------
+countThymioWorkerFound = worker1 + worker2
+
+
+
+#---------------------------------------<Beacon>-----<Communication>------------------------------------
+onevent prox.comm
+		#-------------beacon start communication and broadcast signal
+		callsub beaconCommunication
+#-------------------------reset nearByThymioWorker variable stored in Beacon is error message is recieved from # nearbythymio worker........
+# Error Messge 404 signfies that the nearby robot has given up waiting and resumed randonWalkState............
+	#check if 404 recieved
+	if (nearByThymioWorker[1] == 404) then
+	#intention here is to reset the values of the array below
+	# reset the values of prox.comm
+			nearByThymioWorker[0] = 0
+			nearByThymioWorker[1] = 0
+			thymioWorker1 = 0
+			thymioWorker2 = 0
+			worker1 =0
+			worker2 =0
+			countThymioWorkerFound =0
+			call sound.system(1)
+	end
+
+#------------check for successful colloboration of two thymioWorker with thymio beacon---------------------	
+if(collaborationSuccessful == 1)then
+	call sound.system(7)
+	prox.comm.tx = 20
+	timer.period[1] =0
+	timer.period[0] =0
+call leds.top(0,32,0) 	
+call leds.bottom.left(0,0,0)
+call leds.bottom.right(0,0,0)
+call leds.buttons(0,0,0,0)
+call leds.circle(0,0,0,0,0,0,0,0)
+call leds.prox.h(0,0,0,0,0,0,0,0)
+call leds.prox.v(0,0)
+call leds.rc(0)
+call leds.sound(0)
+call leds.temperature(0,0)	
+end
+#---------------------------------------------------------------------------------------------------------------------------------------------
+
+#-------------------------------this subroutine is activated on prox.comm event in which the beacon will be able to recieve and pass message to nearby thymio robot-----
+sub beaconCommunication
+
+	#-------------recieve signal from nearby Thymio Worker------------------
+foundThymio = prox.comm.rx
+
+	if (collaborationSuccessful == 0) then
+	#-------------thymio beacon receives signal from nearby thymio worker
+	#-----------only two thymioWorkers can be acknowledged----------
+	if (thymioWorker1 == 0 and prox.comm.rx !=errorMessage and nearByThymioWorker[0] == 0) then # assign first signal received to thymioWorker1
+		thymioWorker1 = foundThymio
+		nearByThymioWorker[0] = thymioWorker1
+				worker1++
+		#-----------acknowledge the robot sending signal----------------------
+		if (worker1 == 1) then
+				prox.comm.tx = thymioWorker1
+				call sound.system(3)
+	end
+	end
+
+	if (thymioWorker1 !=0 and thymioWorker2 == 0 and nearByThymioWorker[1] == 0 ) then
+			thymioWorker2 = foundThymio
+			#---verify thymioWorker2 if the signal recieved is different from thymioWorker1
+			if (thymioWorker2 == thymioWorker1) then
+				thymioWorker2 = 0
+			else
+				nearByThymioWorker[1] = thymioWorker2
+						worker2++
+				#-----------acknowledge the robot sending signal----------------------
+					if (worker2 == 1) then
+							prox.comm.tx = thymioWorker2
+							call sound.system(7)
+					end
+			end
+	end
+	
+	# collaboration successful ---------
+	if (thymioWorker1 !=0 and thymioWorker2 !=0 and thymioWorker1 != thymioWorker2 and nearByThymioWorker[0] != nearByThymioWorker[1] 
+	and nearByThymioWorker[0] !=errorMessage and nearByThymioWorker[1] !=errorMessage and nearByThymioWorker[0] !=0 and nearByThymioWorker[1] != 0) then
+	collaborationSuccessful = 1 
+	closeCommunicationOnCollaborationSuccessful =1 
+	end
+
+end
+
+onevent prox
+	if (closeCommunicationOnCollaborationSuccessful ==1) then
+	countToSelfDestruct++
+	if (countToSelfDestruct > 99) then
+		call prox.comm.enable(0)
+		countToSelfDestruct =0
+		closeCommunicationOnCollaborationSuccessful = 0
+		call leds.top(0,0,0)
+	end
+	end

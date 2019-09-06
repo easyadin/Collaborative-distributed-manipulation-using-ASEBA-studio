@@ -1,0 +1,69 @@
+#NO DISTINCTION BETWEEN SENDER AND RECEIVER
+#BOTH WILL SEND A VALUE LETS SAY 20 AND 21 Robot A
+var MESSAGE = 20 # 
+var MESSAGE_RECEIVED = 0
+var COUNT_UNTIL_CLEAR_MESSAGE = 0
+var CLEAR_MESSAGE = 0
+call leds.top(32,32,32)
+
+call prox.comm.enable(1)
+
+prox.comm.tx = MESSAGE
+
+timer.period[0] = 300
+
+onevent timer0
+	prox.comm.tx = MESSAGE
+	call prox.comm.enable(1)
+	CLEAR_MESSAGE++
+ 	#NOW WE TURN OF THE COMM AND ON AGAIN
+ 	if (CLEAR_MESSAGE > 40) then
+ 		call prox.comm.enable(0)
+ 		CLEAR_MESSAGE = 0
+ 		##call leds.top(32,0,0)
+ 	end
+ 	
+ 	if (prox.comm.rx == 21) then
+ 		call leds.top(0,32,0)
+ 	end
+ 	
+ 	if (prox.comm.rx != 21) then
+ 		call leds.top(32,0,0)
+ 	end
+ 	
+ 	if (prox.comm.rx == 0) then
+		call leds.top(32,0,0)
+	end
+	
+	if (prox.comm.rx != 0) then
+		#call leds.top(32,32,0)
+	end
+onevent prox.comm
+	#call leds.top(32,32,0) ## initial color yellow
+	
+	if (prox.comm.rx == 21) then
+		#START A COUNTER	
+		COUNT_UNTIL_CLEAR_MESSAGE++
+		MESSAGE_RECEIVED = prox.comm.rx		
+	end
+	
+	
+	if (MESSAGE == MESSAGE_RECEIVED) then
+		call leds.top(0,32,0)
+		COUNT_UNTIL_CLEAR_MESSAGE++
+	end
+	
+	
+	if (COUNT_UNTIL_CLEAR_MESSAGE > 100) then
+			MESSAGE_RECEIVED = 0
+			prox.comm.tx = MESSAGE
+			COUNT_UNTIL_CLEAR_MESSAGE =0
+	end
+	
+	
+	if (COUNT_UNTIL_CLEAR_MESSAGE > 100 and MESSAGE_RECEIVED == 0) then
+			call leds.top(32,0,0)
+			MESSAGE_RECEIVED = 0
+			prox.comm.tx = MESSAGE
+			COUNT_UNTIL_CLEAR_MESSAGE = 0
+	end
